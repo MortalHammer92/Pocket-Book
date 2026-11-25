@@ -5,7 +5,7 @@
 <h1 align="center">Pocket Book</h1>
 
 <p align="center">
-  <b>Un gestionnaire de mots de passe et de contacts très simple. Sans internet. On l'installe et on s'en sert tout de suite.</b><br>
+  <b>Un gestionnaire de mots de passe hors ligne et un carnet d'adresses simples — on l'installe et on s'en sert tout de suite.</b><br>
   Windows · macOS · Linux — Français · English · Español · Deutsch · Italiano
 </p>
 
@@ -16,6 +16,10 @@
 </p>
 
 ---
+
+**Pocket Book** est un **gestionnaire de mots de passe hors ligne** et un **carnet d'adresses**
+gratuits et open source pour **Windows, macOS et Linux**, pensés pour les **seniors et les
+débutants** : gros caractères, grands boutons, sans compte, sans cloud, sans connexion internet.
 
 ## Pourquoi
 
@@ -34,7 +38,7 @@ Il est volontairement **simple** :
 > **Important — Pocket Book n'est pas un coffre-fort chiffré.**
 > Les fiches sont enregistrées en clair dans votre dossier *Documents* : toute personne qui peut
 > ouvrir votre session peut les lire. C'est un remplacement plus rangé et plus sûr des « mots de
-> passe dans des documents Word », pas d'un gestionnaire comme Bitwarden ou KeePass. Protégez
+> passe dans des documents Word », pas d'un coffre-fort chiffré comme Bitwarden ou KeePass. Protégez
 > l'ordinateur par un mot de passe de session et, si possible, par le chiffrement du disque
 > (BitLocker, FileVault, LUKS).
 
@@ -57,6 +61,14 @@ Il est volontairement **simple** :
 - **Confortable à lire** — 4 tailles de texte, 4 thèmes (clair, sombre, contraste fort,
   sépia doux), barre de lettres A–Z, recherche, catégories en couleur.
 - **5 langues** — détectée automatiquement, modifiable dans les *Réglages*.
+
+## Pour qui ?
+
+- **Les seniors et les personnes peu à l'aise avec l'ordinateur** — tout est en gros caractères,
+  avec des mots simples et une confirmation avant toute action risquée.
+- **Les familles et les aidants** qui préparent l'ordinateur d'un parent ou d'un grand-parent.
+- **Toute personne dont les mots de passe sont éparpillés dans des fichiers Word ou texte**
+  et qui veut les ranger en quelques minutes.
 
 ## Installation
 
@@ -134,6 +146,23 @@ scripts/build_windows.bat, build.sh   fabrication locale
 
 Le code est écrit en français ; l'interface est traduite. Ajouter une langue = ajouter un
 dictionnaire dans `langues.py` — `python scripts/verifier_traductions.py` liste ce qui manque.
+
+## Questions fréquentes
+
+**Pocket Book est-il gratuit ?** Oui, gratuit et open source (licence MIT).
+
+**Faut-il internet ou un compte ?** Non. Il fonctionne entièrement hors ligne et n'envoie
+vos données nulle part.
+
+**Est-ce sécurisé ?** Vos données restent sur votre ordinateur, mais elles ne sont **pas
+chiffrées**. Utilisez-le sur un ordinateur protégé par un mot de passe de session, idéalement
+avec le chiffrement du disque.
+
+**Peut-il importer mes documents Word ?** Oui : les fichiers `.docx` et `.txt` (pas l'ancien
+format `.doc`). Les mots de passe et contacts sont reconnus en français, anglais, espagnol,
+allemand et italien.
+
+**Dans quelles langues est l'interface ?** Français, anglais, espagnol, allemand et italien.
 
 ## Licence
 

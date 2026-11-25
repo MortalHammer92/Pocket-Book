@@ -5,7 +5,7 @@
 <h1 align="center">Pocket Book</h1>
 
 <p align="center">
-  <b>A very simple password and contact keeper. Offline. Install it and use it right away.</b><br>
+  <b>A simple, offline password manager and contact book — install it and use it right away.</b><br>
   Windows · macOS · Linux — English · Français · Español · Deutsch · Italiano
 </p>
 
@@ -16,6 +16,10 @@
 </p>
 
 ---
+
+**Pocket Book** is a free, open-source **offline password manager** and **address book** for
+**Windows, macOS and Linux**, designed for **seniors and beginners**: large text, big buttons,
+no account, no cloud, no internet connection.
 
 ## Why
 
@@ -34,7 +38,7 @@ It is deliberately **simple**:
 > **Important — Pocket Book is not an encrypted vault.**
 > Cards are stored as plain files in your *Documents* folder, readable by anyone who can open
 > your user account. It is a tidier, safer replacement for "passwords in Word documents", not
-> for a password manager like Bitwarden or KeePass. Protect your computer with a session
+> for an encrypted password vault like Bitwarden or KeePass. Protect your computer with a session
 > password and, ideally, disk encryption (BitLocker, FileVault, LUKS).
 
 ## Features
@@ -58,6 +62,13 @@ It is deliberately **simple**:
 <!-- Screenshot: add docs/screenshot.png and uncomment
 <p align="center"><img src="docs/screenshot.png" width="800" alt="Pocket Book window"></p>
 -->
+
+## Who is it for?
+
+- **Seniors and people who are not comfortable with computers** — everything is in large print,
+  with plain words and confirmation before anything risky.
+- **Families and caregivers** setting up a computer for a parent or grandparent.
+- **Anyone with passwords scattered in Word or text files** who wants them tidy in minutes.
 
 ## Install
 
@@ -132,6 +143,21 @@ scripts/build_windows.bat, build.sh   local builds
 The code is written in French (variables and comments); the interface is translated.
 Adding a language means adding one dictionary in `langues.py` —
 `python scripts/verifier_traductions.py` lists what is missing.
+
+## FAQ
+
+**Is Pocket Book free?** Yes, free and open source (MIT licence).
+
+**Does it need an internet connection or an account?** No. It works fully offline and never
+sends your data anywhere.
+
+**Is it secure?** It keeps your data on your computer only, but it does **not encrypt** it.
+Use it on a computer protected by a session password, ideally with disk encryption.
+
+**Can it import my existing Word documents?** Yes: `.docx` and `.txt` files (not the old `.doc`
+format). Passwords and contacts are recognised in English, French, Spanish, German and Italian.
+
+**Which languages does the interface support?** English, French, Spanish, German and Italian.
 
 ## License
 
