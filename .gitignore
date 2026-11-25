@@ -1,0 +1,15 @@
+# Fabrication
+.venv/
+build/
+dist/
+release/
+*.spec
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Ne jamais publier de vraies données / never commit real data
+pocketbook.json
+carnet.json
+index_documents.json
+backups/

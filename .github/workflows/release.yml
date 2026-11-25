@@ -1,0 +1,102 @@
+# Fabrique Pocket Book pour Windows, macOS (Apple Silicon et Intel) et Linux,
+# puis publie une « Release » GitHub avec les fichiers à télécharger.
+# Déclenchement : pousser une étiquette de version, par exemple
+#   git tag v1.0.0 && git push origin v1.0.0
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+          - os: macos-latest
+            name: macOS-AppleSilicon
+          - os: macos-15-intel
+            name: macOS-Intel
+          - os: ubuntu-22.04
+            name: Linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: python -m pip install --upgrade pip pyinstaller pillow
+
+      - name: Tests
+        run: |
+          python -m pip install pytest
+          python -m pytest -q
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name "Pocket Book" \
+            --icon assets/pocketbook.ico \
+            --add-data "assets/pocketbook.ico;." --add-data "assets/pocketbook.png;." \
+            pocket_book.py
+          mkdir -p release
+          cp "dist/Pocket Book.exe" "release/PocketBook-Setup-Windows.exe"
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller --noconfirm --clean --windowed --name "Pocket Book" \
+            --icon assets/pocketbook.png \
+            --add-data "assets/pocketbook.png:." \
+            --osx-bundle-identifier io.github.mortalhammer92.pocketbook \
+            pocket_book.py
+          mkdir -p release
+          ditto -c -k --keepParent "dist/Pocket Book.app" "release/PocketBook-${{ matrix.name }}.zip"
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name pocket-book \
+            --add-data "assets/pocketbook.png:." \
+            pocket_book.py
+          mkdir -p release/PocketBook-Linux
+          cp dist/pocket-book release/PocketBook-Linux/
+          chmod +x release/PocketBook-Linux/pocket-book
+          cp README.md LICENSE release/PocketBook-Linux/
+          tar -C release -czf release/PocketBook-Linux.tar.gz PocketBook-Linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PocketBook-${{ matrix.name }}
+          path: |
+            release/*.exe
+            release/*.zip
+            release/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: files/*
+          generate_release_notes: true
