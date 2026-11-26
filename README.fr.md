@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="https://mortalhammer92.github.io/Pocket-Book/"><b>Site web</b></a> ·
   <a href="../../releases/latest">Télécharger</a> ·
   <a href="#installation">Installer</a> ·
   <a href="README.md">Read in English</a>
