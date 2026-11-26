@@ -10,6 +10,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/MortalHammer92/Pocket-Book/actions/workflows/tests.yml"><img src="https://github.com/MortalHammer92/Pocket-Book/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest"><img src="https://img.shields.io/github/v/release/MortalHammer92/Pocket-Book" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/MortalHammer92/Pocket-Book" alt="License"></a>
+</p>
+
+<p align="center">
   <a href="../../releases/latest">Download</a> ·
   <a href="#install">Install</a> ·
   <a href="README.fr.md">Lire en français</a>
