@@ -15,6 +15,13 @@
   <a href="README.fr.md">Lire en français</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Setup-Windows.exe"><img src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-AppleSilicon.zip"><img src="https://img.shields.io/badge/Download-macOS%20(Apple%20Silicon)-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS Apple Silicon"></a>
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-Intel.zip"><img src="https://img.shields.io/badge/Download-macOS%20(Intel)-555555?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS Intel"></a>
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Linux.tar.gz"><img src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux"></a>
+</p>
+
 ---
 
 **Pocket Book** is a free, open-source **offline password manager** and **address book** for
@@ -72,15 +79,15 @@ It is deliberately **simple**:
 
 ## Install
 
-Download the file for your computer from the [**latest release**](../../releases/latest).
-Nothing else is needed: Python and everything else are included.
+**Click the file for your computer** — it downloads directly, nothing else is needed (Python and
+everything else are included). All versions: [latest release](../../releases/latest).
 
 | System | File | How to install |
 |---|---|---|
-| **Windows** 10/11 (64-bit) | `PocketBook-Setup-Windows.exe` | Double-click → **Install**. A *Pocket Book* icon appears on the Desktop and in the Start menu. |
-| **macOS** (Apple Silicon) | `PocketBook-macOS-AppleSilicon.zip` | Unzip, drag **Pocket Book** into *Applications*. |
-| **macOS** (Intel) | `PocketBook-macOS-Intel.zip` | Same as above. |
-| **Linux** (Ubuntu 22.04+, Debian 12+, Fedora 36+…) | `PocketBook-Linux.tar.gz` | Extract, double-click `pocket-book` (or run `./pocket-book`) → **Install**. It is added to your applications menu. |
+| **Windows** 10/11 (64-bit) | [**`PocketBook-Setup-Windows.exe`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Setup-Windows.exe) | Double-click → **Install**. A *Pocket Book* icon appears on the Desktop and in the Start menu. |
+| **macOS** (Apple Silicon) | [**`PocketBook-macOS-AppleSilicon.zip`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-AppleSilicon.zip) | Unzip, drag **Pocket Book** into *Applications*. |
+| **macOS** (Intel) | [**`PocketBook-macOS-Intel.zip`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-Intel.zip) | Same as above. |
+| **Linux** (Ubuntu 22.04+, Debian 12+, Fedora 36+…) | [**`PocketBook-Linux.tar.gz`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Linux.tar.gz) | Extract, double-click `pocket-book` (or run `./pocket-book`) → **Install**. It is added to your applications menu. |
 
 **First launch warnings.** The app is free and not signed with a paid certificate, so the
 system warns you the first time:

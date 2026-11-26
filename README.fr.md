@@ -15,6 +15,13 @@
   <a href="README.md">Read in English</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Setup-Windows.exe"><img src="https://img.shields.io/badge/T%C3%A9l%C3%A9charger-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Télécharger for Windows"></a>
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-AppleSilicon.zip"><img src="https://img.shields.io/badge/T%C3%A9l%C3%A9charger-macOS%20(Apple%20Silicon)-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Télécharger for macOS Apple Silicon"></a>
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-Intel.zip"><img src="https://img.shields.io/badge/T%C3%A9l%C3%A9charger-macOS%20(Intel)-555555?style=for-the-badge&logo=apple&logoColor=white" alt="Télécharger for macOS Intel"></a>
+  <a href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Linux.tar.gz"><img src="https://img.shields.io/badge/T%C3%A9l%C3%A9charger-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Télécharger for Linux"></a>
+</p>
+
 ---
 
 **Pocket Book** est un **gestionnaire de mots de passe hors ligne** et un **carnet d'adresses**
@@ -72,16 +79,15 @@ Il est volontairement **simple** :
 
 ## Installation
 
-Téléchargez le fichier correspondant à votre ordinateur dans la
-[**dernière version**](../../releases/latest). Rien d'autre à installer : Python et le reste
-sont inclus.
+**Cliquez sur le fichier de votre ordinateur** : il se télécharge directement, rien d'autre à
+installer (Python et le reste sont inclus). Toutes les versions : [dernière version](../../releases/latest).
 
 | Système | Fichier | Comment installer |
 |---|---|---|
-| **Windows** 10/11 (64 bits) | `PocketBook-Setup-Windows.exe` | Double-clic → **Installer**. Une icône *Pocket Book* apparaît sur le Bureau et dans le menu Démarrer. |
-| **macOS** (Apple Silicon) | `PocketBook-macOS-AppleSilicon.zip` | Dézipper, glisser **Pocket Book** dans *Applications*. |
-| **macOS** (Intel) | `PocketBook-macOS-Intel.zip` | Pareil. |
-| **Linux** (Ubuntu 22.04+, Debian 12+, Fedora 36+…) | `PocketBook-Linux.tar.gz` | Extraire, double-cliquer sur `pocket-book` (ou `./pocket-book`) → **Installer**. Il est ajouté au menu des applications. |
+| **Windows** 10/11 (64 bits) | [**`PocketBook-Setup-Windows.exe`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Setup-Windows.exe) | Double-clic → **Installer**. Une icône *Pocket Book* apparaît sur le Bureau et dans le menu Démarrer. |
+| **macOS** (Apple Silicon) | [**`PocketBook-macOS-AppleSilicon.zip`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-AppleSilicon.zip) | Dézipper, glisser **Pocket Book** dans *Applications*. |
+| **macOS** (Intel) | [**`PocketBook-macOS-Intel.zip`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-Intel.zip) | Pareil. |
+| **Linux** (Ubuntu 22.04+, Debian 12+, Fedora 36+…) | [**`PocketBook-Linux.tar.gz`**](https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Linux.tar.gz) | Extraire, double-cliquer sur `pocket-book` (ou `./pocket-book`) → **Installer**. Il est ajouté au menu des applications. |
 
 **Avertissements au premier lancement.** L'application est gratuite et n'est pas signée avec un
 certificat payant ; le système prévient donc la première fois :
