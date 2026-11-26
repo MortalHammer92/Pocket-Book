@@ -116,7 +116,7 @@ Tout est dans le dossier **Documents/Pocket Book** :
 | `pocketbook.json` | les fiches et les réglages |
 | `backups/` | une copie automatique par jour (30 gardées) + une avant chaque import |
 | `Fiches en texte/` | la copie `.txt` lisible de chaque fiche (le nom dépend de la langue) |
-| `index_documents.json` | la mémoire des documents déjà lus (peut être supprimée) |
+| `documents_index.json` | la mémoire des documents déjà lus (peut être supprimée) |
 
 Pour changer d'ordinateur, il suffit de copier ce dossier.
 Les fiches des premières versions (dossier `Documents/Mon carnet`) sont reprises
@@ -148,16 +148,17 @@ Tests : `python -m pip install pytest && python -m pytest`
 
 ```
 pocket_book.py                 toute l'application (logique + interface Tkinter + installation)
-langues.py                     traductions (EN, ES, DE, IT) et listes de mots des mots de passe
+translations.py                traductions (FR, ES, DE, IT) et listes de mots des mots de passe
 assets/                        icônes
 tests/                         tests pytest (reconnaissance, enregistrement, copies .txt, traductions…)
-scripts/verifier_traductions.py   signale les traductions manquantes ou cassées
+scripts/check_translations.py  signale les traductions manquantes ou cassées
 scripts/build_windows.bat, build.sh   fabrication locale
 .github/workflows/             tests sur 3 systèmes + fabrication des versions
 ```
 
-Les noms du code sont en français, les commentaires en anglais ; l'interface est traduite. Ajouter une langue = ajouter un
-dictionnaire dans `langues.py` — `python scripts/verifier_traductions.py` liste ce qui manque.
+Le code est écrit en anglais ; l'interface est traduite en français, espagnol, allemand et
+italien. Ajouter une langue = ajouter un dictionnaire dans `translations.py` —
+`python scripts/check_translations.py` liste ce qui manque.
 
 ## Questions fréquentes
 

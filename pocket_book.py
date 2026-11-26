@@ -8,12 +8,12 @@ designed for people who are not at ease with computers.
 - Reads old documents (.docx and .txt) WITHOUT EVER CHANGING THEM:
   each recognized document becomes a card, updated when it changes.
 - .txt copy of each card, A to Z sorting, categories, themes, text size.
-- Interface in French, English, Spanish, German and Italian (langues.py).
+- Interface in English, French, Spanish, German and Italian (translations.py).
 - Windows, macOS and Linux. Python standard library only.
 
 Data is stored in "Documents/Pocket Book":
     pocketbook.json        cards and settings (not encrypted: see README)
-    index_documents.json   document reading cache (can be deleted)
+    documents_index.json   document reading cache (can be deleted)
     backups/               one automatic copy per day (30 kept)
 """
 
@@ -38,44 +38,44 @@ from xml.etree import ElementTree
 # Locations
 # ---------------------------------------------------------------------------
 
-from langues import LANGUES, TRADUCTIONS, MOTS_FACILES as MOTS_PAR_LANGUE  # noqa: E402
+from translations import LANGUAGES, TRANSLATIONS, EASY_WORDS  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Interface language
 # ---------------------------------------------------------------------------
-# The program's text is written in French; _("text") returns its translation
-# in the chosen language (langues.py). To add a language: see langues.py.
+# The program's text is written in English; _("text") returns its translation
+# in the chosen language (translations.py). To add a language: see translations.py.
 
-_LANGUE = ["fr"]
-LANGUE_IMPOSEE = [None]   # language passed by the installation window
-
-
-def _(texte, **valeurs):
-    traduit = TRADUCTIONS.get(_LANGUE[0], {}).get(texte, texte)
-    return traduit.format(**valeurs) if valeurs else traduit
+_LANGUAGE = ["en"]
+FORCED_LANGUAGE = [None]   # language passed by the installation window
 
 
-def n_(nombre, singulier, pluriel, **valeurs):
+def _(text, **values):
+    translated = TRANSLATIONS.get(_LANGUAGE[0], {}).get(text, text)
+    return translated.format(**values) if values else translated
+
+
+def n_(number, singular, plural, **values):
     """Singular or plural sentence depending on the number (in French, 0 and 1 are singular)."""
-    un = nombre <= 1 if _LANGUE[0] == "fr" else nombre == 1
-    return _(singulier if un else pluriel, n=nombre, **valeurs)
+    one = number <= 1 if _LANGUAGE[0] == "fr" else number == 1
+    return _(singular if one else plural, n=number, **values)
 
 
-def deux_points(libelle):
+def with_colon(label):
     """"Libellé :" in French, "Label:" in the other languages."""
-    return f"{libelle} :" if _LANGUE[0] == "fr" else f"{libelle}:"
+    return f"{label} :" if _LANGUAGE[0] == "fr" else f"{label}:"
 
 
-def choisir_langue(code):
-    if code in LANGUES:
-        _LANGUE[0] = code
+def set_language(code):
+    if code in LANGUAGES:
+        _LANGUAGE[0] = code
 
 
-def langue_actuelle():
-    return _LANGUE[0]
+def current_language():
+    return _LANGUAGE[0]
 
 
-def langue_du_systeme():
+def system_language():
     """fr, en, es, de or it depending on the system; English by default."""
     codes = []
     if sys.platform.startswith("win"):
@@ -100,159 +100,159 @@ def langue_du_systeme():
                                         capture_output=True, text=True, timeout=5).stdout)
         except Exception:
             pass
-    noms = {"french": "fr", "english": "en", "spanish": "es", "german": "de", "italian": "it"}
+    names = {"french": "fr", "english": "en", "spanish": "es", "german": "de", "italian": "it"}
     for code in codes:
-        bas = (code or "").lower()
-        for nom, abrege in noms.items():
-            if bas.startswith(nom):
-                return abrege
-        bas = bas.strip(' ("\n')
-        if bas[:2] in LANGUES:
-            return bas[:2]
+        bottom = (code or "").lower()
+        for name, short in names.items():
+            if bottom.startswith(name):
+                return short
+        bottom = bottom.strip(' ("\n')
+        if bottom[:2] in LANGUAGES:
+            return bottom[:2]
     return "en"
 
 
-NOM_APPLI = "Pocket Book"
-VERSION = "1.0.0"
-EST_WINDOWS = sys.platform.startswith("win")
-EST_MAC = sys.platform == "darwin"
-EST_LINUX = sys.platform.startswith("linux")
+APP_NAME = "Pocket Book"
+VERSION = "1.1.0"
+IS_WINDOWS = sys.platform.startswith("win")
+IS_MAC = sys.platform == "darwin"
+IS_LINUX = sys.platform.startswith("linux")
 
 
-def dossier_mes_documents():
+def my_documents_folder():
     """The user's "Documents" folder (Windows: even when moved to OneDrive)."""
-    if EST_LINUX:
+    if IS_LINUX:
         try:  # localized folder name (Documents, Dokumente, Documenti…)
             import subprocess
-            chemin = subprocess.run(["xdg-user-dir", "DOCUMENTS"], capture_output=True,
-                                    text=True, timeout=5).stdout.strip()
-            if chemin and os.path.isdir(chemin) and os.path.normpath(chemin) != str(Path.home()):
-                return Path(chemin)
+            path = subprocess.run(["xdg-user-dir", "DOCUMENTS"], capture_output=True,
+                                  text=True, timeout=5).stdout.strip()
+            if path and os.path.isdir(path) and os.path.normpath(path) != str(Path.home()):
+                return Path(path)
         except Exception:
             pass
-    if EST_WINDOWS:
+    if IS_WINDOWS:
         try:
             import ctypes
             from ctypes import wintypes
-            tampon = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-            if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, tampon) == 0:
-                return Path(tampon.value)
+            buffer = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+            if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buffer) == 0:
+                return Path(buffer.value)
         except Exception:
             pass
     return Path.home() / "Documents"
 
 
-DOSSIER_DONNEES = dossier_mes_documents() / "Pocket Book"
-ANCIEN_DOSSIER_DONNEES = dossier_mes_documents() / "Mon carnet"   # name used by the first versions
+DATA_FOLDER = my_documents_folder() / "Pocket Book"
+OLD_DATA_FOLDER = my_documents_folder() / "Mon carnet"   # name used by the first versions
 
 
-def migrer_ancien_dossier():
+def migrate_old_folder():
     """The first versions were called "Mon carnet": their cards are carried over.
 
     The old folder is copied (never deleted) to "Pocket Book".
     """
-    ancien = ANCIEN_DOSSIER_DONNEES / "carnet.json"
-    if DOSSIER_DONNEES.exists() or not ancien.exists():
+    old = OLD_DATA_FOLDER / "carnet.json"
+    if DATA_FOLDER.exists() or not old.exists():
         return False
     try:
-        shutil.copytree(ANCIEN_DOSSIER_DONNEES, DOSSIER_DONNEES)
-        os.replace(DOSSIER_DONNEES / "carnet.json", DOSSIER_DONNEES / "pocketbook.json")
-        anciennes = DOSSIER_DONNEES / "sauvegardes"
-        if anciennes.exists():
-            os.replace(anciennes, DOSSIER_DONNEES / "backups")
-            for f in (DOSSIER_DONNEES / "backups").glob("carnet_*.json"):
+        shutil.copytree(OLD_DATA_FOLDER, DATA_FOLDER)
+        os.replace(DATA_FOLDER / "carnet.json", DATA_FOLDER / "pocketbook.json")
+        old_ones = DATA_FOLDER / "sauvegardes"
+        if old_ones.exists():
+            os.replace(old_ones, DATA_FOLDER / "backups")
+            for f in (DATA_FOLDER / "backups").glob("carnet_*.json"):
                 os.replace(f, f.with_name(f.name.replace("carnet_", "pocketbook_", 1)))
         # the settings pointed to the old folder (.txt copy…)
-        chemin = DOSSIER_DONNEES / "pocketbook.json"
-        donnees = json.loads(chemin.read_text(encoding="utf-8"))
-        reglages = donnees.get("reglages", {})
-        ancien_txt = reglages.get("dossier_txt", "")
-        if ancien_txt.startswith(str(ANCIEN_DOSSIER_DONNEES)):
-            reglages["dossier_txt"] = str(DOSSIER_DONNEES) + ancien_txt[len(str(ANCIEN_DOSSIER_DONNEES)):]
-        chemin.write_text(json.dumps(donnees, ensure_ascii=False, indent=2), encoding="utf-8")
+        path = DATA_FOLDER / "pocketbook.json"
+        data = upgrade_data(json.loads(path.read_text(encoding="utf-8")))
+        settings = data.get("settings", {})
+        old_txt = settings.get("txt_folder", "")
+        if old_txt.startswith(str(OLD_DATA_FOLDER)):
+            settings["txt_folder"] = str(DATA_FOLDER) + old_txt[len(str(OLD_DATA_FOLDER)):]
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         return True
     except (OSError, ValueError):
         return False
 
 
-def ressource(nom):
+def resource(name):
     """File shipped with the program (also works inside the .exe / app)."""
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    for candidat in (os.path.join(base, nom), os.path.join(base, "assets", nom)):
-        if os.path.exists(candidat):
-            return candidat
-    return os.path.join(base, nom)
+    for candidate in (os.path.join(base, name), os.path.join(base, "assets", name)):
+        if os.path.exists(candidate):
+            return candidate
+    return os.path.join(base, name)
 
 
-def ouvrir_avec_systeme(chemin):
+def open_with_system(path):
     """Open a file or folder with the system's usual program."""
     import subprocess
-    if EST_WINDOWS:
-        os.startfile(chemin)  # noqa: S606
-    elif EST_MAC:
-        subprocess.Popen(["open", str(chemin)])
+    if IS_WINDOWS:
+        os.startfile(path)  # noqa: S606
+    elif IS_MAC:
+        subprocess.Popen(["open", str(path)])
     else:
-        subprocess.Popen(["xdg-open", str(chemin)])
+        subprocess.Popen(["xdg-open", str(path)])
 
 
-def montrer_dans_dossier(chemin):
+def show_in_folder(path):
     """Open the folder containing the file, with the file selected if possible."""
     import subprocess
-    if EST_WINDOWS:
-        subprocess.Popen(["explorer", "/select,", os.path.normpath(chemin)])
-    elif EST_MAC:
-        subprocess.Popen(["open", "-R", str(chemin)])
+    if IS_WINDOWS:
+        subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
+    elif IS_MAC:
+        subprocess.Popen(["open", "-R", str(path)])
     else:
-        subprocess.Popen(["xdg-open", str(Path(chemin).parent)])
-FICHIER_CARNET = DOSSIER_DONNEES / "pocketbook.json"
-FICHIER_INDEX = DOSSIER_DONNEES / "index_documents.json"
-DOSSIER_SAUVEGARDES = DOSSIER_DONNEES / "backups"
-NB_SAUVEGARDES_GARDEES = 30
+        subprocess.Popen(["xdg-open", str(Path(path).parent)])
+BOOK_FILE = DATA_FOLDER / "pocketbook.json"
+INDEX_FILE = DATA_FOLDER / "documents_index.json"
+BACKUP_FOLDER = DATA_FOLDER / "backups"
+BACKUPS_KEPT = 30
 
-EXTENSIONS_LUES = (".docx", ".txt")
+READ_EXTENSIONS = (".docx", ".txt")
 
-CHAMPS = {
-    "compte": ["nom", "categorie", "site", "identifiant", "email", "mdp", "notes", "source"],
-    "contact": ["nom", "portable", "telephone", "email", "adresse", "anniversaire", "notes", "source"],
+FIELDS = {
+    "account": ["name", "category", "site", "username", "email", "password", "notes", "source"],
+    "contact": ["name", "mobile", "phone", "email", "address", "birthday", "notes", "source"],
 }
 
-def sans_categorie():
+def no_category():
     """Text for the "no category" choice (the category is optional)."""
-    return _("(aucune)")
+    return _("(none)")
 
 
-def toutes_categories():
-    return _("Toutes")
+def all_categories():
+    return _("All categories")
 
 # Card fields: display order, and the ones that can be added / removed
-ORDRE_CHAMPS = {
-    "compte": ["categorie", "site", "identifiant", "email", "mdp", "notes"],
-    "contact": ["categorie", "portable", "telephone", "email", "adresse", "anniversaire", "notes"],
+FIELD_ORDER = {
+    "account": ["category", "site", "username", "email", "password", "notes"],
+    "contact": ["category", "mobile", "phone", "email", "address", "birthday", "notes"],
 }
-CHAMPS_FACULTATIFS = {
-    "compte": ["categorie", "site"],
-    "contact": ["categorie", "telephone", "adresse", "anniversaire"],
+OPTIONAL_FIELDS = {
+    "account": ["category", "site"],
+    "contact": ["category", "phone", "address", "birthday"],
 }
-LIBELLES_CHAMPS = {
-    "nom": "Nom", "categorie": "Catégorie", "site": "Site internet",
-    "identifiant": "Identifiant", "email": "Adresse e-mail", "mdp": "Mot de passe",
-    "notes": "Notes", "portable": "Portable", "telephone": "Téléphone fixe",
-    "adresse": "Adresse", "anniversaire": "Anniversaire",
+FIELD_LABELS = {
+    "name": "Name", "category": "Category", "site": "Website",
+    "username": "Username", "email": "Email address", "password": "Password",
+    "notes": "Notes", "mobile": "Mobile", "phone": "Landline",
+    "address": "Address", "birthday": "Birthday",
 }
 
 # Category colors: pale backgrounds, text always dark (easy to read)
-PALETTE_CATEGORIES = [
-    ("Bleu", "#D6E6FA"), ("Vert", "#D6F0DC"), ("Jaune", "#FFF0B8"), ("Orange", "#FFDDC2"),
-    ("Rouge", "#F8D3D3"), ("Violet", "#E6DAF5"), ("Rose", "#F8D6E8"),
-    ("Turquoise", "#CDEFEA"), ("Gris", "#E4E2DC"), ("Marron", "#E8D9C7"),
+CATEGORY_PALETTE = [
+    ("Blue", "#D6E6FA"), ("Green", "#D6F0DC"), ("Yellow", "#FFF0B8"), ("Orange", "#FFDDC2"),
+    ("Red", "#F8D3D3"), ("Purple", "#E6DAF5"), ("Pink", "#F8D6E8"),
+    ("Turquoise", "#CDEFEA"), ("Grey", "#E4E2DC"), ("Brown", "#E8D9C7"),
 ]
-TEXTE_SUR_PASTEL = "#1B1A17"
-CATEGORIES_DE_DEPART = [
-    {"nom": "Banque", "couleur": "#D6E6FA"}, {"nom": "Administration", "couleur": "#E4E2DC"},
-    {"nom": "Santé", "couleur": "#D6F0DC"}, {"nom": "Messagerie", "couleur": "#CDEFEA"},
-    {"nom": "Achats", "couleur": "#FFDDC2"}, {"nom": "Factures", "couleur": "#FFF0B8"},
-    {"nom": "Loisirs", "couleur": "#E6DAF5"}, {"nom": "Famille", "couleur": "#F8D6E8"},
-    {"nom": "Travail", "couleur": "#E8D9C7"},
+TEXT_ON_PASTEL = "#1B1A17"
+DEFAULT_CATEGORIES = [
+    {"name": "Bank", "color": "#D6E6FA"}, {"name": "Administration", "color": "#E4E2DC"},
+    {"name": "Health", "color": "#D6F0DC"}, {"name": "Email", "color": "#CDEFEA"},
+    {"name": "Shopping", "color": "#FFDDC2"}, {"name": "Bills", "color": "#FFF0B8"},
+    {"name": "Leisure", "color": "#E6DAF5"}, {"name": "Family", "color": "#F8D6E8"},
+    {"name": "Work", "color": "#E8D9C7"},
 ]
 
 # ---------------------------------------------------------------------------
@@ -260,16 +260,16 @@ CATEGORIES_DE_DEPART = [
 # ---------------------------------------------------------------------------
 
 
-def normaliser(texte):
+def normalize(text_value):
     """Lowercase without accents, so "impot" finds "Impôts"."""
-    texte = unicodedata.normalize("NFD", texte or "")
-    texte = "".join(c for c in texte if unicodedata.category(c) != "Mn")
-    return texte.casefold()
+    text_value = unicodedata.normalize("NFD", text_value or "")
+    text_value = "".join(c for c in text_value if unicodedata.category(c) != "Mn")
+    return text_value.casefold()
 
 
-def premiere_lettre(nom):
+def first_letter(name):
     """Sorting letter: A to Z, or "#" for a digit or a symbol."""
-    for c in normaliser(nom).upper():
+    for c in normalize(name).upper():
         if c.isalpha() and "A" <= c <= "Z":
             return c
         if c.isalnum():
@@ -277,8 +277,8 @@ def premiere_lettre(nom):
     return "#"
 
 
-def cle_tri(nom):
-    return normaliser(nom).strip()
+def sort_key(name):
+    return normalize(name).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -288,78 +288,78 @@ def cle_tri(nom):
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
-def texte_docx(chemin):
+def docx_text(path):
     """Text of a .docx, paragraph by paragraph (tables included)."""
-    with zipfile.ZipFile(chemin, "r") as z:
+    with zipfile.ZipFile(path, "r") as z:
         xml = z.read("word/document.xml")
-    racine = ElementTree.fromstring(xml)
-    lignes = []
+    root = ElementTree.fromstring(xml)
+    lines = []
 
-    def texte_paragraphe(p):
-        morceaux = []
+    def paragraph_text(p):
+        parts = []
         for el in p.iter():
             if el.tag == _W + "t" and el.text:
-                morceaux.append(el.text)
+                parts.append(el.text)
             elif el.tag == _W + "tab":
-                morceaux.append("\t")
+                parts.append("\t")
             elif el.tag in (_W + "br", _W + "cr"):
-                morceaux.append("\n")
-        return "".join(morceaux)
+                parts.append("\n")
+        return "".join(parts)
 
-    def parcourir(element):
-        for enfant in element:
-            if enfant.tag == _W + "p":
-                lignes.append(texte_paragraphe(enfant))
-            elif enfant.tag == _W + "tbl":
+    def walk_tree(element):
+        for child in element:
+            if child.tag == _W + "p":
+                lines.append(paragraph_text(child))
+            elif child.tag == _W + "tbl":
                 # A table: one line per row, cells separated by a tab
-                for rangee in enfant.iter(_W + "tr"):
-                    cellules = [" ".join(texte_paragraphe(p) for p in cellule.iter(_W + "p")).strip()
-                                for cellule in rangee.findall(_W + "tc")]
-                    lignes.append("\t".join(cellules))
+                for row in child.iter(_W + "tr"):
+                    cells = [" ".join(paragraph_text(p) for p in cell.iter(_W + "p")).strip()
+                             for cell in row.findall(_W + "tc")]
+                    lines.append("\t".join(cells))
             else:
-                parcourir(enfant)
+                walk_tree(child)
 
-    parcourir(racine)
-    return "\n".join(lignes)
+    walk_tree(root)
+    return "\n".join(lines)
 
 
-def texte_txt(chemin):
-    brut = Path(chemin).read_bytes()
-    for codage in ("utf-8-sig", "cp1252", "latin-1"):
+def txt_text(path):
+    raw = Path(path).read_bytes()
+    for encoding_name in ("utf-8-sig", "cp1252", "latin-1"):
         try:
-            return brut.decode(codage)
+            return raw.decode(encoding_name)
         except UnicodeDecodeError:
             continue
-    return brut.decode("utf-8", errors="replace")
+    return raw.decode("utf-8", errors="replace")
 
 
-def lire_document(chemin):
-    ext = Path(chemin).suffix.lower()
+def read_document(path):
+    ext = Path(path).suffix.lower()
     if ext == ".docx":
-        return texte_docx(chemin)
+        return docx_text(path)
     if ext == ".txt":
-        return texte_txt(chemin)
-    raise ValueError(_("Type de fichier non pris en charge"))
+        return txt_text(path)
+    raise ValueError(_("File type not supported"))
 
 
-def lister_documents(dossier, exclure=()):
+def list_documents(folder, exclude=()):
     """Every .docx / .txt in the folder and its subfolders.
 
     Also returns the number of old .doc files (Word 97-2003), which are not read.
     """
-    resultats, anciens = [], 0
-    for racine, sous_dossiers, fichiers in os.walk(dossier):
-        exclus = {os.path.normcase(os.path.abspath(e)) for e in exclure if e}
-        sous_dossiers[:] = [d for d in sous_dossiers if not d.startswith(".")
-                            and os.path.normcase(os.path.abspath(os.path.join(racine, d))) not in exclus]
-        for f in fichiers:
+    results, old_entries = [], 0
+    for root, subfolders, files in os.walk(folder):
+        excluded = {os.path.normcase(os.path.abspath(e)) for e in exclude if e}
+        subfolders[:] = [d for d in subfolders if not d.startswith(".")
+                         and os.path.normcase(os.path.abspath(os.path.join(root, d))) not in excluded]
+        for f in files:
             if f.startswith("~$") or f.startswith("."):
                 continue  # Word temporary files
-            if f.lower().endswith(EXTENSIONS_LUES):
-                resultats.append(os.path.join(racine, f))
+            if f.lower().endswith(READ_EXTENSIONS):
+                results.append(os.path.join(root, f))
             elif f.lower().endswith(".doc"):
-                anciens += 1
-    return resultats, anciens
+                old_entries += 1
+    return results, old_entries
 
 
 # ---------------------------------------------------------------------------
@@ -367,24 +367,24 @@ def lister_documents(dossier, exclure=()):
 # ---------------------------------------------------------------------------
 
 # Labels recognized in documents (French, English, Spanish, German, Italian)
-_LIBELLES = {
-    "mdp": ["mot de passe", "mdp", "password", "pass", "pwd", "code secret",
-            "code", "mot passe", "passcode", "pin",
-            "contrasena", "clave", "clave de acceso",
-            "passwort", "kennwort", "pw",
-            "parola d'ordine", "parola chiave", "chiave"],
+_LABELS = {
+    "password": ["mot de passe", "mdp", "password", "pass", "pwd", "code secret",
+                 "code", "mot passe", "passcode", "pin",
+                 "contrasena", "clave", "clave de acceso",
+                 "passwort", "kennwort", "pw",
+                 "parola d'ordine", "parola chiave", "chiave"],
     "email": ["e-mail", "email", "mail", "adresse mail", "adresse e-mail",
               "courriel", "gmail", "hotmail", "outlook", "orange", "laposte",
               "yahoo", "free", "email address", "e-mail address",
               "correo", "correo electronico", "e-mail-adresse", "posta", "posta elettronica"],
-    "identifiant": ["identifiant", "id", "login", "utilisateur",
-                    "nom d'utilisateur", "nom d utilisateur", "pseudo", "user",
-                    "numero client", "n client", "n° client", "numero fiscal",
-                    "n° fiscal", "client", "numero", "n°",
-                    "username", "user name", "user id", "account", "account number",
-                    "customer number", "usuario", "nombre de usuario", "cuenta",
-                    "benutzer", "benutzername", "kundennummer", "konto",
-                    "utente", "nome utente", "account utente", "codice cliente"],
+    "username": ["identifiant", "id", "login", "utilisateur",
+                 "nom d'utilisateur", "nom d utilisateur", "pseudo", "user",
+                 "numero client", "n client", "n° client", "numero fiscal",
+                 "n° fiscal", "client", "numero", "n°",
+                 "username", "user name", "user id", "account", "account number",
+                 "customer number", "usuario", "nombre de usuario", "cuenta",
+                 "benutzer", "benutzername", "kundennummer", "konto",
+                 "utente", "nome utente", "account utente", "codice cliente"],
     "site": ["site", "url", "lien", "adresse du site", "site internet",
              "website", "web site", "link", "sitio", "sitio web", "pagina",
              "webseite", "seite", "sito", "sito web"],
@@ -392,47 +392,47 @@ _LIBELLES = {
 
 _RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _RE_URL = re.compile(r"^(https?://|www\.)\S+$", re.IGNORECASE)
-_RE_LIBELLE = re.compile(r"^\s*([^:=\t]{1,30}?)\s*(?:[:=]|\t+)\s*(.*)$")
+_RE_LABEL = re.compile(r"^\s*([^:=\t]{1,30}?)\s*(?:[:=]|\t+)\s*(.*)$")
 
 
-def _quel_libelle(libelle):
-    lib = normaliser(libelle).strip(" .-_*:=")
-    for champ, mots in _LIBELLES.items():
-        for mot in mots:
-            if lib == normaliser(mot):
-                return champ
+def _which_label(label):
+    lib = normalize(label).strip(" .-_*:=")
+    for field, words in _LABELS.items():
+        for word in words:
+            if lib == normalize(word):
+                return field
     return None
 
 
-def deviner_categorie(nom):
-    n = normaliser(nom)
-    regles = [
-        ("Banque", ["banque", "bnp", "credit", "caisse d", "societe generale",
-                    "lcl", "boursorama", "cofidis", "cetelem", "cep", "paypal",
-                    "bank", "banco", "banca", "sparkasse", "revolut", "n26"]),
+def guess_category(name):
+    n = normalize(name)
+    rules = [
+        ("Bank", ["banque", "bnp", "credit", "caisse d", "societe generale",
+                  "lcl", "boursorama", "cofidis", "cetelem", "cep", "paypal",
+                  "bank", "banco", "banca", "sparkasse", "revolut", "n26"]),
         ("Administration", ["impot", "caf", "urssaf", "gouv", "retraite",
                             "ants", "france connect", "franceconnect", "inpi",
                             "pole emploi", "france travail", "tax", "hacienda",
                             "finanzamt", "agenzia entrate", "gov"]),
-        ("Santé", ["ameli", "doctolib", "mutuelle", "pharma", "sante",
-                   "health", "salud", "gesundheit", "salute", "krankenkasse"]),
-        ("Messagerie", ["mail", "gmail", "outlook", "hotmail", "laposte.net",
-                        "orange", "yahoo"]),
-        ("Factures", ["edf", "engie", "free", "sfr", "bouygues", "veolia",
-                      "eau", "gaz", "assurance"]),
-        ("Achats", ["amazon", "cdiscount", "fnac", "leboncoin", "dominos",
-                    "mcdonald", "carrefour", "leclerc"]),
-        ("Loisirs", ["netflix", "deezer", "spotify", "disney", "canal",
+        ("Health", ["ameli", "doctolib", "mutuelle", "pharma", "sante",
+                    "health", "salud", "gesundheit", "salute", "krankenkasse"]),
+        ("Email", ["mail", "gmail", "outlook", "hotmail", "laposte.net",
+                   "orange", "yahoo"]),
+        ("Bills", ["edf", "engie", "free", "sfr", "bouygues", "veolia",
+                   "eau", "gaz", "assurance"]),
+        ("Shopping", ["amazon", "cdiscount", "fnac", "leboncoin", "dominos",
+                      "mcdonald", "carrefour", "leclerc"]),
+        ("Leisure", ["netflix", "deezer", "spotify", "disney", "canal",
                      "battlenet", "ea", "nvidia"]),
     ]
-    for categorie, mots in regles:
-        for mot in mots:
-            if re.search(r"(^|[^a-z])" + re.escape(mot), n):
-                return _(categorie)
+    for category, words in rules:
+        for word in words:
+            if re.search(r"(^|[^a-z])" + re.escape(word), n):
+                return _(category)
     return ""  # nothing certain: no category rather than a wrong one
 
 
-def deviner_fiche(nom, texte):
+def guess_card(name, text_value):
     """Suggest a card (dictionary) from a document's text.
 
     Recognized formats, for example:
@@ -440,95 +440,95 @@ def deviner_fiche(nom, texte):
         (empty line)               MDP : xxxxx
         MotDePasse
     """
-    fiche = {"identifiant": "", "email": "", "mdp": "", "site": ""}
-    emails, urls, jetons, textes = [], [], [], []
-    champ_en_attente = None
+    card = {"username": "", "email": "", "password": "", "site": ""}
+    emails, urls, tokens, texts = [], [], [], []
+    pending_field = None
 
-    for ligne in (texte or "").splitlines():
-        ligne = ligne.strip()
-        if not ligne:
+    for line in (text_value or "").splitlines():
+        line = line.strip()
+        if not line:
             continue
 
-        if champ_en_attente:
-            if not fiche[champ_en_attente]:
-                fiche[champ_en_attente] = ligne
-                champ_en_attente = None
+        if pending_field:
+            if not card[pending_field]:
+                card[pending_field] = line
+                pending_field = None
                 continue
-            champ_en_attente = None
+            pending_field = None
 
         # A label on its own ("Mot de passe"): the value is on the next line.
-        champ_seul = _quel_libelle(ligne)
-        if champ_seul:
-            champ_en_attente = champ_seul
+        lone_field = _which_label(line)
+        if lone_field:
+            pending_field = lone_field
             continue
 
-        m = _RE_LIBELLE.match(ligne)
-        if m and not _RE_URL.match(ligne):
-            champ = _quel_libelle(m.group(1))
-            if champ:
-                valeur = m.group(2).strip()
-                if champ == "email" and valeur and not _RE_EMAIL.match(valeur):
-                    champ = "identifiant"
-                if not valeur:
-                    champ_en_attente = champ
-                elif not fiche[champ]:
-                    fiche[champ] = valeur
+        m = _RE_LABEL.match(line)
+        if m and not _RE_URL.match(line):
+            field = _which_label(m.group(1))
+            if field:
+                value = m.group(2).strip()
+                if field == "email" and value and not _RE_EMAIL.match(value):
+                    field = "username"
+                if not value:
+                    pending_field = field
+                elif not card[field]:
+                    card[field] = value
                 else:
-                    textes.append(ligne)
+                    texts.append(line)
                 continue
 
-        if _RE_EMAIL.match(ligne):
-            emails.append(ligne)
-        elif _RE_URL.match(ligne):
-            urls.append(ligne)
-        elif " " not in ligne and "\t" not in ligne:
-            jetons.append(ligne)
+        if _RE_EMAIL.match(line):
+            emails.append(line)
+        elif _RE_URL.match(line):
+            urls.append(line)
+        elif " " not in line and "\t" not in line:
+            tokens.append(line)
         else:
-            textes.append(ligne)
+            texts.append(line)
 
     for e in emails:
-        if not fiche["email"]:
-            fiche["email"] = e
+        if not card["email"]:
+            card["email"] = e
         else:
-            textes.append(e)
+            texts.append(e)
     for u in urls:
-        if not fiche["site"]:
-            fiche["site"] = u
+        if not card["site"]:
+            card["site"] = u
         else:
-            textes.append(u)
+            texts.append(u)
 
-    if jetons:
-        if not fiche["mdp"]:
-            if len(jetons) >= 2:
-                fiche["mdp"] = jetons[-1]
-                reste = jetons[:-1]
-                if not fiche["identifiant"]:
-                    fiche["identifiant"] = reste.pop(0)
-                textes.extend(reste)
+    if tokens:
+        if not card["password"]:
+            if len(tokens) >= 2:
+                card["password"] = tokens[-1]
+                rest = tokens[:-1]
+                if not card["username"]:
+                    card["username"] = rest.pop(0)
+                texts.extend(rest)
             else:
-                seul = jetons[0]
-                deja_un_compte = fiche["email"] or fiche["identifiant"]
-                if not deja_un_compte and seul.isdigit() and len(seul) >= 8:
-                    fiche["identifiant"] = seul
+                lone = tokens[0]
+                already_account = card["email"] or card["username"]
+                if not already_account and lone.isdigit() and len(lone) >= 8:
+                    card["username"] = lone
                 else:
-                    fiche["mdp"] = seul
+                    card["password"] = lone
         else:
-            if not fiche["identifiant"]:
-                fiche["identifiant"] = jetons.pop(0)
-            textes.extend(jetons)
+            if not card["username"]:
+                card["username"] = tokens.pop(0)
+            texts.extend(tokens)
 
-    if not fiche["site"] and re.search(r"\.[a-z]{2,4}$", normaliser(nom)):
-        fiche["site"] = nom.strip()
+    if not card["site"] and re.search(r"\.[a-z]{2,4}$", normalize(name)):
+        card["site"] = name.strip()
 
     return {
-        "type": "compte",
-        "nom": nom.strip() or _("Sans nom"),
-        "categorie": deviner_categorie(nom),
-        "site": fiche["site"],
-        "identifiant": fiche["identifiant"],
-        "email": fiche["email"],
-        "mdp": fiche["mdp"],
-        "notes": "\n".join(textes),
+        "type": "account",
+        "name": name.strip() or _("Untitled"),
+        "category": guess_category(name),
+        "site": card["site"],
+        "username": card["username"],
+        "email": card["email"],
+        "password": card["password"],
+        "notes": "\n".join(texts),
     }
 
 
@@ -536,15 +536,15 @@ def deviner_fiche(nom, texte):
 # Contacts: recognize and fill in
 # ---------------------------------------------------------------------------
 
-_RE_TEL = re.compile(
+_RE_PHONE = re.compile(
     # France: 06 12 34 56 78, +33 6 12 34 56 78
     r"(?<!\d)(?:(?:\+|00)33\s?\(?0?\)?\s?[1-9]|0[1-9])(?:[\s.\-]?\d{2}){4}(?!\d)"
     # International: +44 20 7946 0958, +49 30 1234567, +56 9 1234 5678…
     r"|(?<![\d+])\+(?!33)\d{1,3}(?:[\s.\-]?\(?\d{1,4}\)?){2,5}(?!\d)"
     # North America: (555) 123-4567, 555-123-4567
     r"|(?<!\d)\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4}(?!\d)")
-_RE_CP = re.compile(r"(?<!\d)\d{5}(?!\d)\s+[A-Za-zÀ-ÿ]")
-_MOTS_RUE = re.compile(
+_RE_POSTCODE = re.compile(r"(?<!\d)\d{5}(?!\d)\s+[A-Za-zÀ-ÿ]")
+_STREET_WORDS = re.compile(
     r"(?:^|\s)(?:\d+\s*(?:bis|ter)?\s*,?\s*)?(?:rue|avenue|av\.|boulevard|bd|chemin|allee|"
     r"impasse|place|route|residence|batiment|bat\.|lieu-dit|cedex|quai|square|"
     r"cours|faubourg|hameau|lotissement|appartement|appt|bp|"
@@ -556,158 +556,158 @@ _MOTS_RUE = re.compile(
     r"|[a-z]+(?:strasse|str\.|weg|platz|gasse)\s+\d")
 
 
-_RE_ADRESSE_NUMERO_PUIS_CP = re.compile(r"^\s*\d+[a-z]?\s+[^\d@]+[\s,]+\d{5}(?:-\d{4})?\s*$", re.IGNORECASE)
+_RE_ADDRESS_NUMBER_THEN_POSTCODE = re.compile(r"^\s*\d+[a-z]?\s+[^\d@]+[\s,]+\d{5}(?:-\d{4})?\s*$", re.IGNORECASE)
 
 
-def ligne_adresse(ligne):
+def address_line(line):
     """A postal address line: postcode + city, "12 rue …", "742 Main St, City 49007"."""
-    if " " not in ligne.strip():
+    if " " not in line.strip():
         return False
-    if _RE_CP.search(ligne) or _RE_ADRESSE_NUMERO_PUIS_CP.match(ligne):
+    if _RE_POSTCODE.search(line) or _RE_ADDRESS_NUMBER_THEN_POSTCODE.match(line):
         return True
-    return bool(_MOTS_RUE.search(normaliser(ligne) + " ") and re.search(r"\d", ligne))
+    return bool(_STREET_WORDS.search(normalize(line) + " ") and re.search(r"\d", line))
 _RE_DATE = re.compile(r"(?<!\d)(\d{1,2})[/.\-](\d{1,2})(?:[/.\-](\d{2,4}))?(?!\d)")
-_MOTS_ANNIV = re.compile(r"(anniv|ne le|nee le|naissance|ne\(e\)|birthday|born|date of birth|"
-                         r"cumpleanos|nacimiento|nacio|geburtstag|geboren|compleanno|nato|nata|nascita)")
-_MOTS_COMPTE = re.compile(r"(mot de passe|mdp|password|identifiant|login|code secret|pseudo|"
-                          r"username|contrasena|usuario|passwort|kennwort|benutzername|"
-                          r"nome utente|parola d'ordine)")
+_BIRTHDAY_WORDS = re.compile(r"(anniv|ne le|nee le|naissance|ne\(e\)|birthday|born|date of birth|"
+                             r"cumpleanos|nacimiento|nacio|geburtstag|geboren|compleanno|nato|nata|nascita)")
+_ACCOUNT_WORDS = re.compile(r"(mot de passe|mdp|password|identifiant|login|code secret|pseudo|"
+                            r"username|contrasena|usuario|passwort|kennwort|benutzername|"
+                            r"nome utente|parola d'ordine)")
 
 
-def _est_mot_de_passe_possible(ligne):
+def _could_be_password(line):
     """A single "word" that is neither an e-mail, nor a phone number, nor a website."""
-    return (" " not in ligne and "\t" not in ligne and not _RE_EMAIL.match(ligne)
-            and not _RE_URL.match(ligne) and not _RE_TEL.search(ligne))
+    return (" " not in line and "\t" not in line and not _RE_EMAIL.match(line)
+            and not _RE_URL.match(line) and not _RE_PHONE.search(line))
 
 
-def classer_document(texte):
+def classify_document(text_value):
     """"compte", "contact" or "autre".
 
     Simple, predictable rules; when in doubt: "autre".
     """
-    lignes = [l.strip() for l in (texte or "").splitlines() if l.strip()]
-    if not lignes:
-        return "autre"
-    tout = normaliser("\n".join(lignes))
+    lines = [l.strip() for l in (text_value or "").splitlines() if l.strip()]
+    if not lines:
+        return "other"
+    everything = normalize("\n".join(lines))
 
-    signes_compte = bool(_MOTS_COMPTE.search(tout))
-    telephone = bool(_RE_TEL.search("\n".join(lignes)))
-    adresse = any(ligne_adresse(l) for l in lignes)
-    anniversaire = bool(_MOTS_ANNIV.search(tout) and _RE_DATE.search(tout))
-    signes_contact = telephone or adresse or anniversaire
+    account_signs = bool(_ACCOUNT_WORDS.search(everything))
+    phone = bool(_RE_PHONE.search("\n".join(lines)))
+    address = any(address_line(l) for l in lines)
+    birthday = bool(_BIRTHDAY_WORDS.search(everything) and _RE_DATE.search(everything))
+    contact_signs = phone or address or birthday
 
-    if signes_compte:
-        return "compte"
-    emails = [l for l in lignes if _RE_EMAIL.match(l)]
-    mots_seuls = [l for l in lignes if _est_mot_de_passe_possible(l)]
-    if signes_contact:
+    if account_signs:
+        return "account"
+    emails = [l for l in lines if _RE_EMAIL.match(l)]
+    lone_words = [l for l in lines if _could_be_password(l)]
+    if contact_signs:
         return "contact"
-    if emails and mots_seuls:
-        return "compte"
-    if len(lignes) <= 3 and mots_seuls:
-        return "compte"
-    return "autre"
+    if emails and lone_words:
+        return "account"
+    if len(lines) <= 3 and lone_words:
+        return "account"
+    return "other"
 
 
-def deviner_contact(nom, texte):
-    lignes = [l.strip() for l in (texte or "").splitlines() if l.strip()]
-    portables, fixes, emails, adresse, notes = [], [], [], [], []
-    anniversaire = ""
-    for ligne in lignes:
-        n = normaliser(ligne)
-        reste = ligne
-        for tel in [m.group(0) for m in _RE_TEL.finditer(ligne)]:
-            chiffres = re.sub(r"\D", "", tel)
-            francais = (re.match(r"^0[1-9]\d{8}$", chiffres) or re.match(r"^\s*(\+|00)33", tel))
-            if francais:  # French number: written "06 12 34 56 78"
-                if chiffres.startswith("0033"):
-                    chiffres = chiffres[2:]
-                if chiffres.startswith("33"):
-                    chiffres = "0" + chiffres[2:].lstrip("0")
-                joli = " ".join(chiffres[i:i + 2] for i in range(0, len(chiffres), 2))
-                mobile = chiffres[:2] in ("06", "07")
+def guess_contact(name, text_value):
+    lines = [l.strip() for l in (text_value or "").splitlines() if l.strip()]
+    mobiles, landlines, emails, address, notes = [], [], [], [], []
+    birthday = ""
+    for line in lines:
+        n = normalize(line)
+        rest = line
+        for phone_number in [m.group(0) for m in _RE_PHONE.finditer(line)]:
+            digits_on = re.sub(r"\D", "", phone_number)
+            french = (re.match(r"^0[1-9]\d{8}$", digits_on) or re.match(r"^\s*(\+|00)33", phone_number))
+            if french:  # French number: written "06 12 34 56 78"
+                if digits_on.startswith("0033"):
+                    digits_on = digits_on[2:]
+                if digits_on.startswith("33"):
+                    digits_on = "0" + digits_on[2:].lstrip("0")
+                pretty = " ".join(digits_on[i:i + 2] for i in range(0, len(digits_on), 2))
+                is_mobile = digits_on[:2] in ("06", "07")
             else:  # other country: kept as is
-                joli = re.sub(r"\s+", " ", tel.strip())
-                mobile = False
-            (portables if mobile else fixes).append(joli)
-            reste = reste.replace(tel, " ")
-        for mot in reste.split():
-            if _RE_EMAIL.match(mot.strip(",;()<>")):
-                emails.append(mot.strip(",;()<>"))
-                reste = reste.replace(mot, " ")
-        reste_net = re.sub(r"^[\s:;,\-–]*(tel|tél|telephone|téléphone|portable|fixe|mobile|"
-                           r"e-mail|email|mail|courriel)?\s*[:.]?\s*", "", reste,
-                           flags=re.IGNORECASE).strip(" :;,-–")
-        if not reste_net:
+                pretty = re.sub(r"\s+", " ", phone_number.strip())
+                is_mobile = False
+            (mobiles if is_mobile else landlines).append(pretty)
+            rest = rest.replace(phone_number, " ")
+        for word in rest.split():
+            if _RE_EMAIL.match(word.strip(",;()<>")):
+                emails.append(word.strip(",;()<>"))
+                rest = rest.replace(word, " ")
+        rest_clean = re.sub(r"^[\s:;,\-–]*(tel|tél|telephone|téléphone|portable|fixe|mobile|"
+                            r"e-mail|email|mail|courriel)?\s*[:.]?\s*", "", rest,
+                            flags=re.IGNORECASE).strip(" :;,-–")
+        if not rest_clean:
             continue
-        if not anniversaire and _MOTS_ANNIV.search(n) and _RE_DATE.search(ligne):
-            anniversaire = _RE_DATE.search(ligne).group(0)
+        if not birthday and _BIRTHDAY_WORDS.search(n) and _RE_DATE.search(line):
+            birthday = _RE_DATE.search(line).group(0)
             continue
-        if ligne_adresse(reste_net):
-            adresse.append(re.sub(r"^(adresse)\s*[:.]?\s*", "", reste_net, flags=re.IGNORECASE))
+        if address_line(rest_clean):
+            address.append(re.sub(r"^(adresse)\s*[:.]?\s*", "", rest_clean, flags=re.IGNORECASE))
             continue
-        if normaliser(reste_net) == normaliser(nom):
+        if normalize(rest_clean) == normalize(name):
             continue
-        notes.append(reste_net)
+        notes.append(rest_clean)
     return {
         "type": "contact",
-        "nom": nom.strip() or _("Sans nom"),
-        "portable": " / ".join(dict.fromkeys(portables)),
-        "telephone": " / ".join(dict.fromkeys(fixes)),
+        "name": name.strip() or _("Untitled"),
+        "mobile": " / ".join(dict.fromkeys(mobiles)),
+        "phone": " / ".join(dict.fromkeys(landlines)),
         "email": emails[0] if emails else "",
-        "adresse": "\n".join(adresse),
-        "anniversaire": anniversaire,
+        "address": "\n".join(address),
+        "birthday": birthday,
         "notes": "\n".join(notes + emails[1:]),
     }
 
 
-def _titre_possible(ligne):
-    return not (_RE_TEL.search(ligne) or ligne_adresse(ligne) or _RE_EMAIL.match(ligne)
-                or _RE_URL.match(ligne))
+def _possible_title(line):
+    return not (_RE_PHONE.search(line) or address_line(line) or _RE_EMAIL.match(line)
+                or _RE_URL.match(line))
 
 
-def decouper_contacts(nom, texte):
+def split_contacts(name, text_value):
     """A document may hold several contacts (a small address book).
 
     - blocks separated by an empty line, each starting with a name;
     - or a Word table: one row per person (name | phone | address…).
     Otherwise: a single contact, named after the file.
     """
-    texte = (texte or "").strip()
-    blocs = [b for b in re.split(r"\n\s*\n", texte) if b.strip()]
-    trouves = []
-    for bloc in blocs:
-        lignes = [l.strip() for l in bloc.splitlines() if l.strip()]
-        if classer_document(bloc) == "contact" and _titre_possible(lignes[0]):
-            trouves.append((lignes[0], bloc))
-    if len(trouves) >= 2 and len(trouves) >= len(blocs) - 1:
-        return [deviner_contact(titre, bloc) for titre, bloc in trouves]
+    text_value = (text_value or "").strip()
+    blocks = [b for b in re.split(r"\n\s*\n", text_value) if b.strip()]
+    found = []
+    for block in blocks:
+        lines = [l.strip() for l in block.splitlines() if l.strip()]
+        if classify_document(block) == "contact" and _possible_title(lines[0]):
+            found.append((lines[0], block))
+    if len(found) >= 2 and len(found) >= len(blocks) - 1:
+        return [guess_contact(title_text, block) for title_text, block in found]
 
-    rangees = [l for l in texte.splitlines() if "\t" in l and _RE_TEL.search(l)]
-    if len(rangees) >= 2:
-        fiches = []
-        for rangee in rangees:
-            cellules = [c.strip() for c in rangee.split("\t") if c.strip()]
-            if cellules and _titre_possible(cellules[0]):
-                fiches.append(deviner_contact(cellules[0], "\n".join(cellules)))
-        if len(fiches) >= 2:
-            return fiches
-    return [deviner_contact(nom, texte)]
+    rows = [l for l in text_value.splitlines() if "\t" in l and _RE_PHONE.search(l)]
+    if len(rows) >= 2:
+        cards = []
+        for row in rows:
+            cells = [c.strip() for c in row.split("\t") if c.strip()]
+            if cells and _possible_title(cells[0]):
+                cards.append(guess_contact(cells[0], "\n".join(cells)))
+        if len(cards) >= 2:
+            return cards
+    return [guess_contact(name, text_value)]
 
 
-def deviner(nom, texte, genre=None):
+def guess(name, text_value, kind=None):
     """Card(s) suggested for a document, according to its kind (guessed if missing)."""
-    genre = genre or classer_document(texte)
-    if genre == "contact":
-        return decouper_contacts(nom, texte)
-    return [deviner_fiche(nom, texte)]
+    kind = kind or classify_document(text_value)
+    if kind == "contact":
+        return split_contacts(name, text_value)
+    return [guess_card(name, text_value)]
 
 
 # ---------------------------------------------------------------------------
 # Password generator
 # ---------------------------------------------------------------------------
 
-MOTS_FACILES = """
+EASY_WORDS_FR = """
 abeille abricot agneau aigle album amande ananas ancre arbre arc argent
 automne avion balcon baleine bambou banane bateau berger biscuit bleuet
 bougie bouleau boussole brioche brume cabane cactus caillou camion canard
@@ -727,36 +727,36 @@ theiere tigre tilleul tomate tortue train trefle tulipe vallee vanille
 velo verger violette voilier volcan zebre
 """.split()
 
-AMBIGUS = set("0O1lI|")
-SYMBOLES = "!?@#$%&*+-=_"
+AMBIGUOUS = set("0O1lI|")
+SYMBOLS = "!?@#$%&*+-=_"
 
 
-def generer_mot_de_passe(longueur=16, majuscules=True, chiffres=True,
-                         symboles=True, sans_ambigus=True):
-    groupes = [string.ascii_lowercase]
-    if majuscules:
-        groupes.append(string.ascii_uppercase)
-    if chiffres:
-        groupes.append(string.digits)
-    if symboles:
-        groupes.append(SYMBOLES)
-    if sans_ambigus:
-        groupes = ["".join(c for c in g if c not in AMBIGUS) for g in groupes]
-    longueur = max(longueur, len(groupes))
+def generate_password(length=16, uppercase=True, digits_on=True,
+                      symbols=True, no_ambiguous=True):
+    groups = [string.ascii_lowercase]
+    if uppercase:
+        groups.append(string.ascii_uppercase)
+    if digits_on:
+        groups.append(string.digits)
+    if symbols:
+        groups.append(SYMBOLS)
+    if no_ambiguous:
+        groups = ["".join(c for c in g if c not in AMBIGUOUS) for g in groups]
+    length = max(length, len(groups))
     # at least one character from each chosen group
-    caracteres = [secrets.choice(g) for g in groupes]
-    tous = "".join(groupes)
-    caracteres += [secrets.choice(tous) for _i in range(longueur - len(caracteres))]
-    for i in range(len(caracteres) - 1, 0, -1):  # secure shuffle
+    characters = [secrets.choice(g) for g in groups]
+    all_items = "".join(groups)
+    characters += [secrets.choice(all_items) for _i in range(length - len(characters))]
+    for i in range(len(characters) - 1, 0, -1):  # secure shuffle
         j = secrets.randbelow(i + 1)
-        caracteres[i], caracteres[j] = caracteres[j], caracteres[i]
-    return "".join(caracteres)
+        characters[i], characters[j] = characters[j], characters[i]
+    return "".join(characters)
 
 
-def generer_phrase(nb_mots=4):
-    liste = MOTS_PAR_LANGUE.get(langue_actuelle(), MOTS_FACILES)  # words in the chosen language
-    mots = [secrets.choice(liste).capitalize() for _i in range(nb_mots)]
-    return "-".join(mots) + "-" + str(secrets.randbelow(90) + 10)
+def generate_passphrase(word_count=4):
+    listbox = EASY_WORDS.get(current_language(), EASY_WORDS_FR)  # words in the chosen language
+    words = [secrets.choice(listbox).capitalize() for _i in range(word_count)]
+    return "-".join(words) + "-" + str(secrets.randbelow(90) + 10)
 
 
 # ---------------------------------------------------------------------------
@@ -764,441 +764,487 @@ def generer_phrase(nb_mots=4):
 # ---------------------------------------------------------------------------
 
 
-def ecrire_json_sur(chemin, donnees):
+def write_json_safely(path, data):
     """Write to a temporary file then replace: never a half-written file."""
-    chemin = Path(chemin)
-    chemin.parent.mkdir(parents=True, exist_ok=True)
-    temporaire = chemin.with_suffix(chemin.suffix + ".tmp")
-    with open(temporaire, "w", encoding="utf-8") as f:
-        json.dump(donnees, f, ensure_ascii=False, indent=2)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
         f.flush()
         os.fsync(f.fileno())
-    os.replace(temporaire, chemin)
+    os.replace(temp_path, path)
 
 
-class Carnet:
-    def __init__(self, fichier=FICHIER_CARNET, sauvegardes=DOSSIER_SAUVEGARDES):
-        self.fichier = Path(fichier)
-        self.sauvegardes = Path(sauvegardes)
-        self.fiches = []
-        self.reglages = {"taille_texte": 1, "dossier_documents": "", "theme": "clair",
-                         "synchro_auto": True,
-                         "dossier_txt": str(DOSSIER_DONNEES / _("Fiches en texte")),
-                         "txt_connus": [],
-                         "categories": [{"nom": _(c["nom"]), "couleur": c["couleur"]}
-                                        for c in CATEGORIES_DE_DEPART]}
-        self._cache_txt = {}
-        self.message_txt = ""
-        self.message_recuperation = ""
+# Files saved before version 1.1 used French names: they are converted when read.
+_OLD_CARD_KEYS = {
+    "nom": "name", "categorie": "category", "identifiant": "username", "mdp": "password",
+    "telephone": "phone", "portable": "mobile", "adresse": "address", "anniversaire": "birthday",
+    "cree_le": "created_at", "modifie_le": "modified_at", "importe_le": "imported_at",
+    "modifiee_a_la_main": "edited_by_hand", "fichier_txt": "txt_file", "perso": "custom",
+    "champs_ajoutes": "added_fields",
+}
+_OLD_SETTING_KEYS = {
+    "taille_texte": "text_size", "dossier_documents": "documents_folder",
+    "synchro_auto": "auto_sync", "dossier_txt": "txt_folder", "txt_connus": "known_txt",
+    "sources_ecartees": "dismissed_sources", "langue": "language",
+}
+_OLD_VALUES = {"compte": "account", "autre": "other",
+               "clair": "light", "sombre": "dark", "contraste": "contrast"}
+
+
+def _renamed(old, keys):
+    return {keys.get(k, k): v for k, v in old.items()}
+
+
+def upgrade_data(data):
+    """Convert a book saved by an older version (French names) to the current format."""
+    if "fiches" not in data and "reglages" not in data:
+        return data
+    cards = []
+    for old_card in data.get("fiches", []):
+        card = _renamed(old_card, _OLD_CARD_KEYS)
+        card["type"] = _OLD_VALUES.get(card.get("type"), card.get("type"))
+        card["custom"] = [{"label": c.get("libelle", ""), "value": c.get("valeur", "")}
+                          for c in card.get("custom", [])]
+        card["added_fields"] = [_OLD_CARD_KEYS.get(f, f) for f in card.get("added_fields", [])]
+        if not card["custom"]:
+            del card["custom"]
+        if not card["added_fields"]:
+            del card["added_fields"]
+        cards.append(card)
+    settings = _renamed(data.get("reglages", {}), _OLD_SETTING_KEYS)
+    if "theme" in settings:
+        settings["theme"] = _OLD_VALUES.get(settings["theme"], settings["theme"])
+    if "categories" in settings:
+        settings["categories"] = [{"name": c.get("nom", ""), "color": c.get("couleur", "")}
+                                  for c in settings["categories"]]
+    return {"version": 2, "saved_at": data.get("enregistre_le", ""),
+            "settings": settings, "cards": cards}
+
+
+class Book:
+    def __init__(self, file_path=BOOK_FILE, backups=BACKUP_FOLDER):
+        self.file_path = Path(file_path)
+        self.backups = Path(backups)
+        self.cards = []
+        self.settings = {"text_size": 1, "documents_folder": "", "theme": "light",
+                         "auto_sync": True,
+                         "txt_folder": str(DATA_FOLDER / _("Cards as text")),
+                         "known_txt": [],
+                         "categories": [{"name": _(c["name"]), "color": c["color"]}
+                                        for c in DEFAULT_CATEGORIES]}
+        self._txt_cache = {}
+        self.txt_message = ""
+        self.recovery_message = ""
 
     # -- loading -------------------------------------------------------------
-    def charger(self):
-        if not self.fichier.exists():
+    def load(self):
+        if not self.file_path.exists():
             return
         try:
-            self._charger_depuis(self.fichier)
+            self._load_from(self.file_path)
         except Exception:
             # Damaged file: set it aside and fall back to the latest backup.
             date = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-            abime = self.fichier.with_name("pocketbook_illisible_" + date + ".json")
+            damaged = self.file_path.with_name("pocketbook_unreadable_" + date + ".json")
             try:
-                shutil.copy2(self.fichier, abime)
+                shutil.copy2(self.file_path, damaged)
             except OSError:
                 pass
-            for sauvegarde in self.liste_sauvegardes():
+            for backup in self.list_backups():
                 try:
-                    self._charger_depuis(sauvegarde)
-                    self.message_recuperation = _(
-                        "Le carnet était abîmé. La sauvegarde du {date} a été reprise.",
-                        date=sauvegarde.stem.replace("pocketbook_", ""))
+                    self._load_from(backup)
+                    self.recovery_message = _(
+                        "The notebook was damaged. The backup from {date} has been restored.",
+                        date=backup.stem.replace("pocketbook_", ""))
                     return
                 except Exception:
                     continue
-            self.message_recuperation = _(
-                "Le carnet était abîmé et aucune sauvegarde n'a pu être lue. "
-                "Une copie a été gardée : {fichier}", fichier=abime.name)
+            self.recovery_message = _(
+                "The notebook was damaged and no backup could be read. A copy was kept: {file_path}", file_path=damaged.name)
 
-    def _charger_depuis(self, chemin):
-        with open(chemin, "r", encoding="utf-8") as f:
-            donnees = json.load(f)
-        fiches = donnees.get("fiches", [])
-        for fiche in fiches:
-            fiche.setdefault("id", uuid.uuid4().hex)
-            fiche.setdefault("type", "compte")
-            for champ in CHAMPS[fiche["type"] if fiche["type"] in CHAMPS else "compte"]:
-                fiche.setdefault(champ, "")
-        self.fiches = fiches
-        self.reglages.update(donnees.get("reglages", {}))
-        self.assurer_categories()
+    def _load_from(self, path):
+        with open(path, "r", encoding="utf-8") as f:
+            data = upgrade_data(json.load(f))
+        cards = data.get("cards", [])
+        for card in cards:
+            card.setdefault("id", uuid.uuid4().hex)
+            card.setdefault("type", "account")
+            for field in FIELDS[card["type"] if card["type"] in FIELDS else "account"]:
+                card.setdefault(field, "")
+        self.cards = cards
+        self.settings.update(data.get("settings", {}))
+        self.ensure_categories()
 
     # -- saving --------------------------------------------------------------
-    def enregistrer(self):
-        ecrire_json_sur(self.fichier, {
-            "version": 1,
-            "enregistre_le": datetime.now().isoformat(timespec="seconds"),
-            "reglages": self.reglages,
-            "fiches": self.fiches,
+    def save(self):
+        write_json_safely(self.file_path, {
+            "version": 2,
+            "saved_at": datetime.now().isoformat(timespec="seconds"),
+            "settings": self.settings,
+            "cards": self.cards,
         })
 
-    def liste_sauvegardes(self):
-        if not self.sauvegardes.exists():
+    def list_backups(self):
+        if not self.backups.exists():
             return []
-        return sorted(self.sauvegardes.glob("pocketbook_*.json"), reverse=True)
+        return sorted(self.backups.glob("pocketbook_*.json"), reverse=True)
 
-    def sauvegarde_du_jour(self, force=False):
+    def daily_backup(self, force=False):
         """One copy per day (or on demand, e.g. before an import)."""
-        if not self.fichier.exists():
+        if not self.file_path.exists():
             return
-        self.sauvegardes.mkdir(parents=True, exist_ok=True)
+        self.backups.mkdir(parents=True, exist_ok=True)
         if force:
-            nom = "pocketbook_" + datetime.now().strftime("%Y-%m-%d_%Hh%M") + ".json"
+            name = "pocketbook_" + datetime.now().strftime("%Y-%m-%d_%Hh%M") + ".json"
         else:
-            nom = "pocketbook_" + datetime.now().strftime("%Y-%m-%d") + ".json"
-        cible = self.sauvegardes / nom
-        if force or not cible.exists():
-            shutil.copy2(self.fichier, cible)
-        for ancienne in self.liste_sauvegardes()[NB_SAUVEGARDES_GARDEES:]:
+            name = "pocketbook_" + datetime.now().strftime("%Y-%m-%d") + ".json"
+        target_path = self.backups / name
+        if force or not target_path.exists():
+            shutil.copy2(self.file_path, target_path)
+        for old_backup in self.list_backups()[BACKUPS_KEPT:]:
             try:
-                ancienne.unlink()
+                old_backup.unlink()
             except OSError:
                 pass
 
     # -- cards ---------------------------------------------------------------
-    def nouvelle_fiche(self, type="compte", **champs):
-        fiche = {"id": uuid.uuid4().hex, "type": type}
-        fiche.update({c: "" for c in CHAMPS[type]})
-        fiche["nom"] = _("Nouveau contact") if type == "contact" else _("Nouvelle fiche")
-        fiche["cree_le"] = datetime.now().isoformat(timespec="seconds")
-        fiche.update({k: v for k, v in champs.items() if v is not None})
-        self.fiches.append(fiche)
-        return fiche
+    def new_card(self, type="account", **fields):
+        card = {"id": uuid.uuid4().hex, "type": type}
+        card.update({c: "" for c in FIELDS[type]})
+        card["name"] = _("New contact") if type == "contact" else _("New card")
+        card["created_at"] = datetime.now().isoformat(timespec="seconds")
+        card.update({k: v for k, v in fields.items() if v is not None})
+        self.cards.append(card)
+        return card
 
-    def trouver(self, id_fiche):
-        for fiche in self.fiches:
-            if fiche["id"] == id_fiche:
-                return fiche
+    def find(self, card_id):
+        for card in self.cards:
+            if card["id"] == card_id:
+                return card
         return None
 
-    def supprimer(self, id_fiche):
-        fiche = self.trouver(id_fiche)
-        self.fiches = [f for f in self.fiches if f["id"] != id_fiche]
-        source = (fiche or {}).get("source", "")
-        if source and os.path.normcase(source) not in self.sources_connues():
+    def delete(self, card_id):
+        card = self.find(card_id)
+        self.cards = [f for f in self.cards if f["id"] != card_id]
+        source = (card or {}).get("source", "")
+        if source and os.path.normcase(source) not in self.known_sources():
             # Deleted on purpose: synchronization must not recreate it.
-            ecartees = self.reglages.setdefault("sources_ecartees", [])
-            if os.path.normcase(source) not in ecartees:
-                ecartees.append(os.path.normcase(source))
+            dismissed = self.settings.setdefault("dismissed_sources", [])
+            if os.path.normcase(source) not in dismissed:
+                dismissed.append(os.path.normcase(source))
 
-    def reprendre_source(self, chemin):
+    def restore_source(self, path):
         """Filing requested by hand: the document is no longer set aside."""
-        ecartees = self.reglages.get("sources_ecartees", [])
-        if os.path.normcase(chemin) in ecartees:
-            ecartees.remove(os.path.normcase(chemin))
+        dismissed = self.settings.get("dismissed_sources", [])
+        if os.path.normcase(path) in dismissed:
+            dismissed.remove(os.path.normcase(path))
 
     # -- categories ------------------------------------------------------------
     def categories(self):
-        return self.reglages.setdefault("categories", [])
+        return self.settings.setdefault("categories", [])
 
-    def noms_categories(self):
-        return [c["nom"] for c in self.categories()]
+    def category_names(self):
+        return [c["name"] for c in self.categories()]
 
-    def couleur_categorie(self, nom):
+    def category_color(self, name):
         for c in self.categories():
-            if c["nom"] == nom:
-                return c.get("couleur", "")
+            if c["name"] == name:
+                return c.get("color", "")
         return ""
 
-    def assurer_categories(self):
+    def ensure_categories(self):
         """Every category used by a card exists in the list."""
-        connues = {normaliser(n) for n in self.noms_categories()}
-        for fiche in self.fiches:
-            nom = fiche.get("categorie", "")
-            if nom and normaliser(nom) not in connues:
-                self.categories().append({"nom": nom, "couleur": "#E4E2DC"})
-                connues.add(normaliser(nom))
+        known_names = {normalize(n) for n in self.category_names()}
+        for card in self.cards:
+            name = card.get("category", "")
+            if name and normalize(name) not in known_names:
+                self.categories().append({"name": name, "color": "#E4E2DC"})
+                known_names.add(normalize(name))
 
-    def ajouter_categorie(self, nom):
-        nom = nom.strip()
-        if not nom or normaliser(nom) in {normaliser(n) for n in self.noms_categories()}:
+    def add_category(self, name):
+        name = name.strip()
+        if not name or normalize(name) in {normalize(n) for n in self.category_names()}:
             return False
-        utilisees = {c.get("couleur") for c in self.categories()}
-        libres = [hexa for _nom, hexa in PALETTE_CATEGORIES if hexa not in utilisees]
-        couleur = (libres or [PALETTE_CATEGORIES[len(self.categories()) % len(PALETTE_CATEGORIES)][1]])[0]
-        self.categories().append({"nom": nom, "couleur": couleur})
+        used = {c.get("color") for c in self.categories()}
+        free_colors = [hex_color for _name, hex_color in CATEGORY_PALETTE if hex_color not in used]
+        color = (free_colors or [CATEGORY_PALETTE[len(self.categories()) % len(CATEGORY_PALETTE)][1]])[0]
+        self.categories().append({"name": name, "color": color})
         return True
 
-    def renommer_categorie(self, ancien, nouveau):
-        nouveau = nouveau.strip()
-        if not nouveau:
+    def rename_category(self, old, new):
+        new = new.strip()
+        if not new:
             return False
-        if normaliser(nouveau) != normaliser(ancien) and normaliser(nouveau) in {
-                normaliser(n) for n in self.noms_categories()}:
+        if normalize(new) != normalize(old) and normalize(new) in {
+                normalize(n) for n in self.category_names()}:
             return False
         for c in self.categories():
-            if c["nom"] == ancien:
-                c["nom"] = nouveau
-        for fiche in self.fiches:
-            if fiche.get("categorie") == ancien:
-                fiche["categorie"] = nouveau
+            if c["name"] == old:
+                c["name"] = new
+        for card in self.cards:
+            if card.get("category") == old:
+                card["category"] = new
         return True
 
-    def supprimer_categorie(self, nom):
-        self.reglages["categories"] = [c for c in self.categories() if c["nom"] != nom]
-        for fiche in self.fiches:
-            if fiche.get("categorie") == nom:
-                fiche["categorie"] = ""
+    def delete_category(self, name):
+        self.settings["categories"] = [c for c in self.categories() if c["name"] != name]
+        for card in self.cards:
+            if card.get("category") == name:
+                card["category"] = ""
 
-    def nb_fiches_categorie(self, nom):
-        return sum(1 for f in self.fiches if f.get("categorie") == nom)
+    def category_card_count(self, name):
+        return sum(1 for f in self.cards if f.get("category") == name)
 
-    def categorie_existante(self, nom):
+    def existing_category(self, name):
         """Keep a guessed category only if it still exists."""
-        for n in self.noms_categories():
-            if normaliser(n) == normaliser(nom or ""):
+        for n in self.category_names():
+            if normalize(n) == normalize(name or ""):
                 return n
         return ""
 
     # -- synchronization with the documents folder -----------------------------
-    def synchroniser_documents(self, documents, filtre_categories=None):
+    def sync_documents(self, documents, category_filter=None):
         """Create cards for new documents, update those of changed documents.
 
         - A card edited by hand in the book is never overwritten: it only gets
           a "the document has changed" note.
         - A deleted document does not delete its card.
         - Unrecognized documents create nothing.
-        Returns a summary {"crees", "mises_a_jour", "a_verifier"}.
+        Returns a summary {"created", "updated", "to_check"}.
         """
-        filtre = filtre_categories or (lambda p: p)
-        maintenant = datetime.now().isoformat(timespec="seconds")
-        par_source = {}
-        for fiche in self.fiches:
-            if fiche.get("source"):
-                par_source.setdefault(os.path.normcase(fiche["source"]), []).append(fiche)
-        resume = {"crees": 0, "mises_a_jour": 0, "a_verifier": 0}
-        ecartees = set(self.reglages.get("sources_ecartees", []))
+        filter_fn = category_filter or (lambda p: p)
+        now_str = datetime.now().isoformat(timespec="seconds")
+        by_source = {}
+        for card in self.cards:
+            if card.get("source"):
+                by_source.setdefault(os.path.normcase(card["source"]), []).append(card)
+        summary = {"created": 0, "updated": 0, "to_check": 0}
+        dismissed = set(self.settings.get("dismissed_sources", []))
 
-        for chemin, doc in sorted(documents.items(), key=lambda kv: cle_tri(kv[1]["nom"])):
-            genre = doc.get("genre", "autre")
-            existantes = par_source.get(os.path.normcase(chemin), [])
-            if not existantes:
-                if os.path.normcase(chemin) in ecartees:
+        for path, doc in sorted(documents.items(), key=lambda kv: sort_key(kv[1]["name"])):
+            kind = doc.get("kind", "other")
+            existing = by_source.get(os.path.normcase(path), [])
+            if not existing:
+                if os.path.normcase(path) in dismissed:
                     continue  # card deleted on purpose: do not recreate it
-                if genre in ("compte", "contact") and not doc.get("erreur"):
-                    for champs in filtre(deviner(doc["nom"], doc["texte"], genre)):
-                        self.nouvelle_fiche(source=chemin, source_mtime=doc["mtime"],
-                                            importe_le=maintenant, **champs)
-                        resume["crees"] += 1
+                if kind in ("account", "contact") and not doc.get("error"):
+                    for fields in filter_fn(guess(doc["name"], doc["text"], kind)):
+                        self.new_card(source=path, source_mtime=doc["mtime"],
+                                      imported_at=now_str, **fields)
+                        summary["created"] += 1
                 continue
-            if all(f.get("source_mtime") == doc["mtime"] for f in existantes):
+            if all(f.get("source_mtime") == doc["mtime"] for f in existing):
                 continue  # nothing new
-            if any(f.get("source_mtime") is None for f in existantes):
-                for f in existantes:   # card from before synchronization existed: just record the date
+            if any(f.get("source_mtime") is None for f in existing):
+                for f in existing:   # card from before synchronization existed: just record the date
                     f["source_mtime"] = doc["mtime"]
                 continue
-            modifiees = [f for f in existantes if f.get("modifiee_a_la_main")
-                         or f.get("modifie_le", "") > f.get("importe_le", "")]
-            if modifiees:
-                date = datetime.now().strftime("%d/%m/%Y")
-                for f in existantes:
+            modified = [f for f in existing if f.get("edited_by_hand")
+                        or f.get("modified_at", "") > f.get("imported_at", "")]
+            if modified:
+                date = datetime.now().strftime(_("%m/%d/%Y"))
+                for f in existing:
                     f["source_mtime"] = doc["mtime"]
-                    note = _("⚠ Le document « {nom} » a changé le {date} : "
-                             "vérifiez cette fiche (elle n'a pas été remplacée).",
-                             nom=doc["nom"], date=date)
+                    note = _("⚠ The document “{name}” changed on {date}: check this card (it was "
+                             "not replaced).",
+                             name=doc["name"], date=date)
                     f["notes"] = (f.get("notes", "").rstrip() + "\n" + note).strip()
-                resume["a_verifier"] += 1
+                summary["to_check"] += 1
                 continue
             # Card never edited by hand: rebuild it from the document
-            genre_fiche = genre if genre in ("compte", "contact") else existantes[0].get("type", "compte")
-            propositions = filtre(deviner(doc["nom"], doc["texte"], genre_fiche))
-            if len(propositions) == 1 and len(existantes) == 1:
-                fiche = existantes[0]
-                for cle in CHAMPS.get(fiche.get("type", "compte"), []):
-                    if cle != "source":
-                        fiche[cle] = ""
-                fiche.update(propositions[0])
-                fiche.update(source_mtime=doc["mtime"], importe_le=maintenant,
-                             modifie_le=maintenant)
+            card_kind = kind if kind in ("account", "contact") else existing[0].get("type", "account")
+            suggestions = filter_fn(guess(doc["name"], doc["text"], card_kind))
+            if len(suggestions) == 1 and len(existing) == 1:
+                card = existing[0]
+                for key in FIELDS.get(card.get("type", "account"), []):
+                    if key != "source":
+                        card[key] = ""
+                card.update(suggestions[0])
+                card.update(source_mtime=doc["mtime"], imported_at=now_str,
+                            modified_at=now_str)
             else:
-                ids = {f["id"] for f in existantes}
-                self.fiches = [f for f in self.fiches if f["id"] not in ids]
-                for champs in propositions:
-                    self.nouvelle_fiche(source=chemin, source_mtime=doc["mtime"],
-                                        importe_le=maintenant, **champs)
-            resume["mises_a_jour"] += 1
-        return resume
+                ids = {f["id"] for f in existing}
+                self.cards = [f for f in self.cards if f["id"] not in ids]
+                for fields in suggestions:
+                    self.new_card(source=path, source_mtime=doc["mtime"],
+                                  imported_at=now_str, **fields)
+            summary["updated"] += 1
+        return summary
 
-    def sources_connues(self):
-        return {os.path.normcase(f.get("source", "")) for f in self.fiches if f.get("source")}
+    def known_sources(self):
+        return {os.path.normcase(f.get("source", "")) for f in self.cards if f.get("source")}
 
     # -- .txt copy of each card ------------------------------------------------
-    def synchroniser_txt(self):
+    def sync_txt(self):
         """One .txt per card in the chosen folder; only writes what changed.
 
         Returns True if all is well (otherwise the problem is in self.message_txt).
         """
-        dossier = self.reglages.get("dossier_txt", "")
-        if not dossier:
+        folder = self.settings.get("txt_folder", "")
+        if not folder:
             return True
-        dossier = Path(dossier)
-        self.message_txt = ""
-        voulus = {}   # relative path -> content
-        pris = set()
+        folder = Path(folder)
+        self.txt_message = ""
+        wanted = {}   # relative path -> content
+        taken = set()
 
-        renommages = {}   # new relative path -> old one (renamed card)
-        connus = {os.path.normcase(r) for r in self.reglages.get("txt_connus", [])}
+        renames = {}   # new relative path -> old one (renamed card)
+        known = {os.path.normcase(r) for r in self.settings.get("known_txt", [])}
 
-        def place(fiche, rel):
-            pris.add(os.path.normcase(rel))
-            voulus[rel] = texte_de_fiche(fiche)
-            ancien = fiche.get("fichier_txt", "")
-            if ancien and os.path.normcase(ancien) != os.path.normcase(rel):
-                renommages[rel] = ancien
-            fiche["fichier_txt"] = rel
+        def place(card, rel):
+            taken.add(os.path.normcase(rel))
+            wanted[rel] = card_text(card)
+            old = card.get("txt_file", "")
+            if old and os.path.normcase(old) != os.path.normcase(rel):
+                renames[rel] = old
+            card["txt_file"] = rel
 
         # 1) each card keeps its file if it still matches its name
-        a_placer = []
-        for fiche in sorted(self.fiches, key=lambda f: f.get("cree_le", "")):
-            sous = _(SOUS_DOSSIERS_TXT.get(fiche.get("type", "compte"), "Autres"))
-            base = nom_de_fichier(fiche.get("nom", ""))
-            ancien = fiche.get("fichier_txt", "")
-            ancien_dans_bon_dossier = ancien and Path(ancien).parent.name == sous
-            stem = Path(ancien).stem if ancien else ""
-            garde = (ancien_dans_bon_dossier and os.path.normcase(ancien) not in pris
-                     and (stem == base or re.fullmatch(re.escape(base) + r" \(\d+\)", stem)))
-            if garde:
-                place(fiche, ancien)
+        to_place = []
+        for card in sorted(self.cards, key=lambda f: f.get("created_at", "")):
+            subfolder = _(TXT_SUBFOLDERS.get(card.get("type", "account"), "Other"))
+            base = file_name(card.get("name", ""))
+            old = card.get("txt_file", "")
+            old_in_right_folder = old and Path(old).parent.name == subfolder
+            stem = Path(old).stem if old else ""
+            kept = (old_in_right_folder and os.path.normcase(old) not in taken
+                    and (stem == base or re.fullmatch(re.escape(base) + r" \(\d+\)", stem)))
+            if kept:
+                place(card, old)
             else:
-                a_placer.append((fiche, sous, base))
+                to_place.append((card, subfolder, base))
         # 2) new (or renamed) cards get a free name
-        for fiche, sous, base in a_placer:
+        for card, subfolder, base in to_place:
             n = 1
             while True:
-                rel = os.path.join(sous, (base if n == 1 else f"{base} ({n})") + ".txt")
-                libre = os.path.normcase(rel) not in pris and (
-                    os.path.normcase(rel) in connus or not (dossier / rel).exists())
-                if libre:  # never overwrite a file that was not created by the book
+                rel = os.path.join(subfolder, (base if n == 1 else f"{base} ({n})") + ".txt")
+                free = os.path.normcase(rel) not in taken and (
+                    os.path.normcase(rel) in known or not (folder / rel).exists())
+                if free:  # never overwrite a file that was not created by the book
                     break
                 n += 1
-            place(fiche, rel)
+            place(card, rel)
 
         try:
-            voulus_n = {os.path.normcase(r) for r in voulus}
+            wanted_norm = {os.path.normcase(r) for r in wanted}
             # Renamed card: rename its file (instead of creating a new one)
-            for rel, ancien in renommages.items():
-                source, cible = dossier / ancien, dossier / rel
-                if (os.path.normcase(ancien) not in voulus_n and source.exists()
-                        and not cible.exists()):
-                    cible.parent.mkdir(parents=True, exist_ok=True)
-                    os.replace(source, cible)
-                    self._cache_txt.pop(str(source), None)
-            for rel, contenu in voulus.items():
-                chemin = dossier / rel
-                if self._cache_txt.get(str(chemin)) == contenu:
+            for rel, old in renames.items():
+                source, target_path = folder / old, folder / rel
+                if (os.path.normcase(old) not in wanted_norm and source.exists()
+                        and not target_path.exists()):
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    os.replace(source, target_path)
+                    self._txt_cache.pop(str(source), None)
+            for rel, content in wanted.items():
+                path = folder / rel
+                if self._txt_cache.get(str(path)) == content:
                     continue
                 try:
-                    actuel = chemin.read_text(encoding="utf-8-sig")
+                    current = path.read_text(encoding="utf-8-sig")
                 except OSError:
-                    actuel = None
-                if actuel != contenu:
-                    chemin.parent.mkdir(parents=True, exist_ok=True)
-                    temporaire = chemin.with_name(chemin.name + ".tmp")
-                    with open(temporaire, "w", encoding="utf-8-sig", newline="\r\n") as f:
-                        f.write(contenu)
-                    os.replace(temporaire, chemin)
-                self._cache_txt[str(chemin)] = contenu
+                    current = None
+                if current != content:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    temp_path = path.with_name(path.name + ".tmp")
+                    with open(temp_path, "w", encoding="utf-8-sig", newline="\r\n") as f:
+                        f.write(content)
+                    os.replace(temp_path, path)
+                self._txt_cache[str(path)] = content
             # 3) files of deleted cards: moved aside, never erased
-            for rel in self.reglages.get("txt_connus", []):
-                if os.path.normcase(rel) in voulus_n:
+            for rel in self.settings.get("known_txt", []):
+                if os.path.normcase(rel) in wanted_norm:
                     continue
-                chemin = dossier / rel
-                if chemin.exists():
-                    if not any(os.path.normcase(r) == os.path.normcase(rel) for r in voulus):
-                        corbeille = dossier / _("Fiches supprimées")
-                        corbeille.mkdir(parents=True, exist_ok=True)
-                        cible = corbeille / chemin.name
+                path = folder / rel
+                if path.exists():
+                    if not any(os.path.normcase(r) == os.path.normcase(rel) for r in wanted):
+                        trash = folder / _("Deleted cards")
+                        trash.mkdir(parents=True, exist_ok=True)
+                        target_path = trash / path.name
                         n = 2
-                        while cible.exists():
-                            cible = corbeille / f"{chemin.stem} ({n}){chemin.suffix}"
+                        while target_path.exists():
+                            target_path = trash / f"{path.stem} ({n}){path.suffix}"
                             n += 1
-                        os.replace(chemin, cible)
-                self._cache_txt.pop(str(chemin), None)
-            self.reglages["txt_connus"] = sorted(voulus)
+                        os.replace(path, target_path)
+                self._txt_cache.pop(str(path), None)
+            self.settings["known_txt"] = sorted(wanted)
             return True
         except OSError as exc:
-            self.message_txt = str(exc)
+            self.txt_message = str(exc)
             return False
 
-    def changer_dossier_txt(self, nouveau):
+    def change_txt_folder(self, new):
         """New folder: everything is rewritten there (the old one is left as is)."""
-        self.reglages["dossier_txt"] = str(nouveau)
-        self.reglages["txt_connus"] = []
-        self._cache_txt = {}
-        for fiche in self.fiches:
-            fiche.pop("fichier_txt", None)
+        self.settings["txt_folder"] = str(new)
+        self.settings["known_txt"] = []
+        self._txt_cache = {}
+        for card in self.cards:
+            card.pop("txt_file", None)
 
 
-SOUS_DOSSIERS_TXT = {"compte": "Mots de passe", "contact": "Contacts"}   # translated when used
-_INTERDITS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-_RESERVES = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
+TXT_SUBFOLDERS = {"account": "Passwords", "contact": "Contacts"}   # translated when used
+_FORBIDDEN = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_RESERVED = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
 
 
-def nom_de_fichier(nom):
+def file_name(name):
     """Valid Windows file name built from the card's name."""
-    propre = _INTERDITS.sub("-", nom or "").strip().strip(".").strip()
-    propre = re.sub(r"\s+", " ", propre)[:80].strip()
-    if not propre or propre.upper() in _RESERVES:
-        propre = (propre + " (" + _("fiche") + ")").strip() if propre else _("Sans nom")
-    return propre
+    clean = _FORBIDDEN.sub("-", name or "").strip().strip(".").strip()
+    clean = re.sub(r"\s+", " ", clean)[:80].strip()
+    if not clean or clean.upper() in _RESERVED:
+        clean = (clean + " (" + _("card") + ")").strip() if clean else _("Untitled")
+    return clean
 
 
-def _date_lisible(iso):
+def _readable_date(iso):
     try:
-        return datetime.fromisoformat(iso).strftime(_("%d/%m/%Y à %H:%M"))
+        return datetime.fromisoformat(iso).strftime(_("%m/%d/%Y at %H:%M"))
     except (TypeError, ValueError):
         return ""
 
 
-def champ_visible(fiche, champ):
+def field_visible(card, field):
     """An optional field only appears if it is filled in or added on purpose."""
-    genre = fiche.get("type", "compte")
-    return (champ not in CHAMPS_FACULTATIFS.get(genre, []) or bool(fiche.get(champ))
-            or champ in fiche.get("champs_ajoutes", []))
+    kind = card.get("type", "account")
+    return (field not in OPTIONAL_FIELDS.get(kind, []) or bool(card.get(field))
+            or field in card.get("added_fields", []))
 
 
-def texte_de_fiche(fiche):
+def card_text(card):
     """Content of a card's .txt file (readable in Notepad)."""
-    genre = fiche.get("type", "compte")
-    lignes = [fiche.get("nom", "") or _("Sans nom"), "=" * max(len(fiche.get("nom", "")), 8), ""]
-    blocs = []
-    for champ in ORDRE_CHAMPS.get(genre, []):
-        if champ == "notes" or not champ_visible(fiche, champ):
+    kind = card.get("type", "account")
+    lines = [card.get("name", "") or _("Untitled"), "=" * max(len(card.get("name", "")), 8), ""]
+    blocks = []
+    for field in FIELD_ORDER.get(kind, []):
+        if field == "notes" or not field_visible(card, field):
             continue
-        valeur = fiche.get(champ, "")
-        if champ == "adresse":
-            blocs += ["", deux_points(_("Adresse")), valeur or "-"]
+        value = card.get(field, "")
+        if field == "address":
+            blocks += ["", with_colon(_("Address")), value or "-"]
         else:
-            lignes.append(f"{deux_points(_(LIBELLES_CHAMPS[champ]))} {valeur}")
-    for perso in fiche.get("perso", []):
-        lignes.append(f"{deux_points(perso.get('libelle', ''))} {perso.get('valeur', '')}")
-    lignes += blocs
-    lignes += ["", deux_points(_("Notes")), fiche.get("notes", "") or "-", ""]
-    date = _date_lisible(fiche.get("modifie_le") or fiche.get("cree_le"))
-    lignes.append("-" * 60)
-    lignes.append(_("Copie automatique faite par Pocket Book (fiche modifiée le {date}).", date=date)
-                  if date else _("Copie automatique faite par Pocket Book."))
-    lignes.append(_("Ce fichier est réécrit à chaque changement : modifiez la fiche dans le carnet."))
-    return "\n".join(lignes) + "\n"
+            lines.append(f"{with_colon(_(FIELD_LABELS[field]))} {value}")
+    for custom in card.get("custom", []):
+        lines.append(f"{with_colon(custom.get('label', ''))} {custom.get('value', '')}")
+    lines += blocks
+    lines += ["", with_colon(_("Notes")), card.get("notes", "") or "-", ""]
+    date = _readable_date(card.get("modified_at") or card.get("created_at"))
+    lines.append("-" * 60)
+    lines.append(_("Automatic copy made by Pocket Book (card changed on {date}).", date=date)
+                 if date else _("Automatic copy made by Pocket Book."))
+    lines.append(_("This file is rewritten after every change: edit the card in the notebook."))
+    return "\n".join(lines) + "\n"
 
 
-def fiche_correspond(fiche, recherche):
-    if not recherche:
+def card_matches(card, search):
+    if not search:
         return True
-    tout = " ".join(str(v) for k, v in fiche.items()
-                    if k not in ("id", "type", "source", "mdp", "cree_le", "modifie_le",
-                                 "perso", "champs_ajoutes", "fichier_txt"))
-    tout += " " + " ".join(f"{p.get('libelle', '')} {p.get('valeur', '')}"
-                           for p in fiche.get("perso", []))
-    return recherche in normaliser(tout)
+    everything = " ".join(str(v) for k, v in card.items()
+                          if k not in ("id", "type", "source", "password", "created_at", "modified_at",
+                                       "custom", "added_fields", "txt_file"))
+    everything += " " + " ".join(f"{p.get('label', '')} {p.get('value', '')}"
+                                 for p in card.get("custom", []))
+    return search in normalize(everything)
 
 
 # ---------------------------------------------------------------------------
@@ -1206,42 +1252,42 @@ def fiche_correspond(fiche, recherche):
 # ---------------------------------------------------------------------------
 
 
-def charger_index():
+def load_index():
     try:
-        with open(FICHIER_INDEX, "r", encoding="utf-8") as f:
+        with open(INDEX_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {"dossier": "", "documents": {}}
+        return {"folder": "", "documents": {}}
 
 
-def indexer(dossier, ancien_index, progression=None, exclure=()):
+def index_documents(folder, old_index, progress=None, exclude=()):
     """Read new or changed documents; reuse the cache for the others."""
-    anciens = ancien_index.get("documents", {}) if ancien_index.get("dossier") == dossier else {}
-    chemins, anciens_doc = lister_documents(dossier, exclure)
-    total = len(chemins)
-    nouveaux = {}
-    for i, chemin in enumerate(chemins, 1):
+    old_entries = old_index.get("documents", {}) if old_index.get("folder") == folder else {}
+    paths, old_doc_count = list_documents(folder, exclude)
+    total = len(paths)
+    new_entries = {}
+    for i, path in enumerate(paths, 1):
         try:
-            st = os.stat(chemin)
+            st = os.stat(path)
         except OSError:
             continue
-        ancien = anciens.get(chemin)
-        if ancien and ancien.get("mtime") == st.st_mtime and ancien.get("taille") == st.st_size:
-            ancien.setdefault("genre", classer_document(ancien.get("texte", "")))
-            nouveaux[chemin] = ancien
+        old = old_entries.get(path)
+        if old and old.get("mtime") == st.st_mtime and old.get("size") == st.st_size:
+            old.setdefault("kind", classify_document(old.get("text", "")))
+            new_entries[path] = old
         else:
             try:
-                texte = lire_document(chemin)
-                erreur = ""
+                text_value = read_document(path)
+                error = ""
             except Exception as exc:  # damaged or protected document, renamed old .doc…
-                texte = ""
-                erreur = _("Impossible de lire ce document ({erreur}).", erreur=type(exc).__name__)
-            nouveaux[chemin] = {"nom": Path(chemin).stem, "mtime": st.st_mtime,
-                                "taille": st.st_size, "texte": texte, "erreur": erreur,
-                                "genre": classer_document(texte)}
-        if progression and (i % 25 == 0 or i == total):
-            progression(i, total)
-    return {"dossier": dossier, "documents": nouveaux, "anciens_doc": anciens_doc}
+                text_value = ""
+                error = _("Could not read this document ({error}).", error=type(exc).__name__)
+            new_entries[path] = {"name": Path(path).stem, "mtime": st.st_mtime,
+                                 "size": st.st_size, "text": text_value, "error": error,
+                                 "kind": classify_document(text_value)}
+        if progress and (i % 25 == 0 or i == total):
+            progress(i, total)
+    return {"folder": folder, "documents": new_entries, "old_doc_count": old_doc_count}
 
 
 # ===========================================================================
@@ -1253,1691 +1299,1690 @@ from tkinter import filedialog, messagebox, ttk  # noqa: E402
 import tkinter.font as tkfont  # noqa: E402
 
 # Readable fonts available on each system (the first one found is used)
-POLICES_TEXTE = ["Verdana", "Segoe UI", "DejaVu Sans", "Noto Sans", "Helvetica"]
-POLICES_MONO = ["Consolas", "Menlo", "DejaVu Sans Mono", "Noto Sans Mono", "Courier New"]
+TEXT_FONTS = ["Verdana", "Segoe UI", "DejaVu Sans", "Noto Sans", "Helvetica"]
+MONO_FONTS = ["Consolas", "Menlo", "DejaVu Sans Mono", "Noto Sans Mono", "Courier New"]
 
 
-def police_disponible(candidates):
+def available_font(candidates):
     try:
-        presentes = {f.lower() for f in tkfont.families()}
+        present_fonts = {f.lower() for f in tkfont.families()}
     except Exception:
         return candidates[0]
-    for nom in candidates:
-        if nom.lower() in presentes:
-            return nom
+    for name in candidates:
+        if name.lower() in present_fonts:
+            return name
     return candidates[-1]
 
 
-def mettre_icone(fenetre):
+def set_icon(window):
     """Window icon: .ico on Windows, .png elsewhere."""
     try:
-        if EST_WINDOWS:
-            fenetre.iconbitmap(default=ressource("pocketbook.ico"))
+        if IS_WINDOWS:
+            window.iconbitmap(default=resource("pocketbook.ico"))
         else:
-            image = tk.PhotoImage(file=ressource("pocketbook.png"))
-            fenetre.iconphoto(True, image)
-            fenetre._icone = image  # keep the image in memory
+            image = tk.PhotoImage(file=resource("pocketbook.png"))
+            window.iconphoto(True, image)
+            window._icon = image  # keep the image in memory
     except Exception:
         pass
 
 # Color themes (all checked for good text contrast)
 THEMES = {
-    "clair": {"nom": "Clair", "BLEU_TEXTE": "#1E4F91", "VERT_TEXTE": "#1F6B3A", "FOND": "#F6F4EF", "BLANC": "#FFFFFF", "ENCRE": "#1B1A17",
-              "GRIS": "#4A4740", "BORDURE": "#CFC9BC", "BORDURE_FORTE": "#8C8578",
-              "BLEU": "#1E4F91", "BLEU_CLAIR": "#E3ECF8", "BLEU_FONCE": "#163B6D",
-              "VERT": "#1F6B3A", "VERT_FONCE": "#174F2B", "ROUGE": "#A4321F",
-              "ROUGE_CLAIR": "#F6E3DF", "JAUNE_FOND": "#FFF6E5", "JAUNE_BORD": "#E0B867",
-              "JAUNE_TEXTE": "#6B4A0C", "BARRE": "#EDE9E0", "LETTRE_ETEINTE": "#A8A296",
-              "FOND_TEXTE": "#FBFAF7"},
-    "sombre": {"nom": "Sombre", "BLEU_TEXTE": "#8DB8F0", "VERT_TEXTE": "#7FD09E", "FOND": "#1C1D20", "BLANC": "#2A2C30", "ENCRE": "#F1F0EC",
-               "GRIS": "#C8C5BE", "BORDURE": "#4A4D53", "BORDURE_FORTE": "#8B8E94",
-               "BLEU": "#2F6DBA", "BLEU_CLAIR": "#2F3B4E", "BLEU_FONCE": "#24578F",
-               "VERT": "#23784A", "VERT_FONCE": "#1A5C38", "ROUGE": "#FF9C8A",
-               "ROUGE_CLAIR": "#4A2C28", "JAUNE_FOND": "#3A3020", "JAUNE_BORD": "#B48B35",
-               "JAUNE_TEXTE": "#F3D58E", "BARRE": "#25262A", "LETTRE_ETEINTE": "#6E7076",
-               "FOND_TEXTE": "#232528"},
-    "contraste": {"nom": "Contraste fort", "BLEU_TEXTE": "#0033A0", "VERT_TEXTE": "#00591F", "FOND": "#FFFFFF", "BLANC": "#FFFFFF",
-                  "ENCRE": "#000000", "GRIS": "#000000", "BORDURE": "#000000",
-                  "BORDURE_FORTE": "#000000", "BLEU": "#0033A0", "BLEU_CLAIR": "#D6E4FF",
-                  "BLEU_FONCE": "#00226B", "VERT": "#00591F", "VERT_FONCE": "#003D15",
-                  "ROUGE": "#B00000", "ROUGE_CLAIR": "#FFE0E0", "JAUNE_FOND": "#FFF4B3",
-                  "JAUNE_BORD": "#000000", "JAUNE_TEXTE": "#000000", "BARRE": "#F0F0F0",
-                  "LETTRE_ETEINTE": "#8A8A8A", "FOND_TEXTE": "#FFFFFF"},
-    "sepia": {"nom": "Sépia doux", "BLEU_TEXTE": "#7A4416", "VERT_TEXTE": "#3D6B29", "FOND": "#F2E8D5", "BLANC": "#FBF5E9", "ENCRE": "#2B2116",
-              "GRIS": "#5B4A36", "BORDURE": "#D5C3A1", "BORDURE_FORTE": "#9C8768",
-              "BLEU": "#7A4416", "BLEU_CLAIR": "#EEDCC0", "BLEU_FONCE": "#5C3210",
-              "VERT": "#3D6B29", "VERT_FONCE": "#2C5020", "ROUGE": "#9E2F1C",
-              "ROUGE_CLAIR": "#F3DCD3", "JAUNE_FOND": "#FFF3D6", "JAUNE_BORD": "#D2A852",
-              "JAUNE_TEXTE": "#5E410B", "BARRE": "#EADCC2", "LETTRE_ETEINTE": "#B0A089",
-              "FOND_TEXTE": "#FDF9F0"},
+    "light": {"name": "Light", "BLUE_TEXT": "#1E4F91", "GREEN_TEXT": "#1F6B3A", "BG": "#F6F4EF", "WHITE": "#FFFFFF", "INK": "#1B1A17",
+              "GREY": "#4A4740", "BORDER": "#CFC9BC", "BORDER_STRONG": "#8C8578",
+              "BLUE": "#1E4F91", "BLUE_LIGHT": "#E3ECF8", "BLUE_DARK": "#163B6D",
+              "GREEN": "#1F6B3A", "GREEN_DARK": "#174F2B", "RED": "#A4321F",
+              "RED_LIGHT": "#F6E3DF", "YELLOW_BG": "#FFF6E5", "YELLOW_BORDER": "#E0B867",
+              "YELLOW_TEXT": "#6B4A0C", "BAR": "#EDE9E0", "LETTER_OFF": "#A8A296",
+              "TEXT_BG": "#FBFAF7"},
+    "dark": {"name": "Dark", "BLUE_TEXT": "#8DB8F0", "GREEN_TEXT": "#7FD09E", "BG": "#1C1D20", "WHITE": "#2A2C30", "INK": "#F1F0EC",
+             "GREY": "#C8C5BE", "BORDER": "#4A4D53", "BORDER_STRONG": "#8B8E94",
+             "BLUE": "#2F6DBA", "BLUE_LIGHT": "#2F3B4E", "BLUE_DARK": "#24578F",
+             "GREEN": "#23784A", "GREEN_DARK": "#1A5C38", "RED": "#FF9C8A",
+             "RED_LIGHT": "#4A2C28", "YELLOW_BG": "#3A3020", "YELLOW_BORDER": "#B48B35",
+             "YELLOW_TEXT": "#F3D58E", "BAR": "#25262A", "LETTER_OFF": "#6E7076",
+             "TEXT_BG": "#232528"},
+    "contrast": {"name": "High contrast", "BLUE_TEXT": "#0033A0", "GREEN_TEXT": "#00591F", "BG": "#FFFFFF", "WHITE": "#FFFFFF",
+                 "INK": "#000000", "GREY": "#000000", "BORDER": "#000000",
+                 "BORDER_STRONG": "#000000", "BLUE": "#0033A0", "BLUE_LIGHT": "#D6E4FF",
+                 "BLUE_DARK": "#00226B", "GREEN": "#00591F", "GREEN_DARK": "#003D15",
+                 "RED": "#B00000", "RED_LIGHT": "#FFE0E0", "YELLOW_BG": "#FFF4B3",
+                 "YELLOW_BORDER": "#000000", "YELLOW_TEXT": "#000000", "BAR": "#F0F0F0",
+                 "LETTER_OFF": "#8A8A8A", "TEXT_BG": "#FFFFFF"},
+    "sepia": {"name": "Soft sepia", "BLUE_TEXT": "#7A4416", "GREEN_TEXT": "#3D6B29", "BG": "#F2E8D5", "WHITE": "#FBF5E9", "INK": "#2B2116",
+              "GREY": "#5B4A36", "BORDER": "#D5C3A1", "BORDER_STRONG": "#9C8768",
+              "BLUE": "#7A4416", "BLUE_LIGHT": "#EEDCC0", "BLUE_DARK": "#5C3210",
+              "GREEN": "#3D6B29", "GREEN_DARK": "#2C5020", "RED": "#9E2F1C",
+              "RED_LIGHT": "#F3DCD3", "YELLOW_BG": "#FFF3D6", "YELLOW_BORDER": "#D2A852",
+              "YELLOW_TEXT": "#5E410B", "BAR": "#EADCC2", "LETTER_OFF": "#B0A089",
+              "TEXT_BG": "#FDF9F0"},
 }
-SUR_ACCENT = "#FFFFFF"   # text on blue / green buttons, whatever the theme
+ON_ACCENT = "#FFFFFF"   # text on blue / green buttons, whatever the theme
 
 
-def appliquer_theme_couleurs(nom):
+def apply_theme_colors(name):
     """Change the colors used by the whole interface."""
-    globals().update({k: v for k, v in THEMES.get(nom, THEMES["clair"]).items() if k != "nom"})
+    globals().update({k: v for k, v in THEMES.get(name, THEMES["light"]).items() if k != "name"})
 
 
-appliquer_theme_couleurs("clair")
+apply_theme_colors("light")
 
-TAILLES = [12, 14, 17, 20]          # text sizes (points)
-LETTRES = ["Tout"] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + ["#"]
-ETIQUETTES_GENRE = {"compte": "Mot de passe", "contact": "Contact", "autre": "?"}
-NOMS_GENRE = {"compte": "un mot de passe", "contact": "un contact", "autre": "non reconnu"}
-def couleur_genre(genre):
-    return {"compte": BLEU_TEXTE, "contact": VERT_TEXTE}.get(genre, GRIS)
+SIZES = [12, 14, 17, 20]          # text sizes (points)
+LETTERS = ["All"] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + ["#"]
+KIND_LABELS = {"account": "Password", "contact": "Contact", "other": "?"}
+KIND_NAMES = {"account": "a password", "contact": "a contact", "other": "not recognised"}
+def kind_color(kind):
+    return {"account": BLUE_TEXT, "contact": GREEN_TEXT}.get(kind, GREY)
 
 
 class Application:
-    def __init__(self, racine):
-        self.racine = racine
-        self.carnet = Carnet()
-        self.carnet.charger()
+    def __init__(self, root):
+        self.root = root
+        self.book = Book()
+        self.book.load()
         try:
-            self.carnet.sauvegarde_du_jour()
+            self.book.daily_backup()
         except OSError:
             pass
 
-        self.page = "compte"
-        self.lettre = "Tout"
-        self.id_courant = None
-        self._chargement = False
-        self._minuterie = None
-        self._minuterie_recherche = None
-        self.index = charger_index()
-        self.file_messages = queue.Queue()
-        self.lecture_en_cours = False
-        self.chemins_affiches = []
-        self.ids_affiches = []
-        self._cache_recherche = {}
-        self._alerte_txt_montree = False
-        self._synchro_demandee = False
+        self.page = "account"
+        self.letter = "All"
+        self.current_id = None
+        self._loading = False
+        self._timer = None
+        self._search_timer = None
+        self.index = load_index()
+        self.message_queue = queue.Queue()
+        self.reading_in_progress = False
+        self.shown_paths = []
+        self.shown_ids = []
+        self._search_cache = {}
+        self._txt_alert_shown = False
+        self._sync_requested = False
 
         # Language: the book's, otherwise the system's (or the one chosen at installation)
-        if LANGUE_IMPOSEE[0]:
-            self.carnet.reglages["langue"] = LANGUE_IMPOSEE[0]
-        choisir_langue(self.carnet.reglages.get("langue") or langue_actuelle())
-        self.carnet.reglages["langue"] = langue_actuelle()
-        appliquer_theme_couleurs(self.carnet.reglages.get("theme", "clair"))
-        self._polices()
-        self._fenetre()
-        self._construire()
-        self.appliquer_taille(self.carnet.reglages.get("taille_texte", 1), enregistrer=False)
-        self.afficher_page("compte")
-        self.racine.after(50, self._apres_ouverture)
-        self.racine.after(300, self._activer_glisser_deposer)
-        self.racine.after(60000, self._synchro_periodique)
+        if FORCED_LANGUAGE[0]:
+            self.book.settings["language"] = FORCED_LANGUAGE[0]
+        set_language(self.book.settings.get("language") or current_language())
+        self.book.settings["language"] = current_language()
+        apply_theme_colors(self.book.settings.get("theme", "light"))
+        self._fonts()
+        self._window()
+        self._build()
+        self.apply_size(self.book.settings.get("text_size", 1), save=False)
+        self.show_page("account")
+        self.root.after(50, self._after_opening)
+        self.root.after(300, self._enable_drag_and_drop)
+        self.root.after(60000, self._periodic_sync)
 
     # ------------------------------------------------------------------ base
-    def _polices(self):
-        famille = police_disponible(POLICES_TEXTE)
-        self.famille = famille
-        self.f_base = tkfont.Font(family=famille, size=14)
-        self.f_gras = tkfont.Font(family=famille, size=14, weight="bold")
-        self.f_petit = tkfont.Font(family=famille, size=12)
-        self.f_titre = tkfont.Font(family=famille, size=20, weight="bold")
-        self.f_mdp = tkfont.Font(family=police_disponible(POLICES_MONO), size=20, weight="bold")
-        self.f_lettre = tkfont.Font(family=famille, size=13, weight="bold")
+    def _fonts(self):
+        family_name = available_font(TEXT_FONTS)
+        self.family_name = family_name
+        self.f_base = tkfont.Font(family=family_name, size=14)
+        self.f_bold = tkfont.Font(family=family_name, size=14, weight="bold")
+        self.f_small = tkfont.Font(family=family_name, size=12)
+        self.f_title = tkfont.Font(family=family_name, size=20, weight="bold")
+        self.f_password = tkfont.Font(family=available_font(MONO_FONTS), size=20, weight="bold")
+        self.f_letter = tkfont.Font(family=family_name, size=13, weight="bold")
 
-    def _fenetre(self):
-        r = self.racine
-        r.title(NOM_APPLI)
-        r.configure(bg=FOND)
+    def _window(self):
+        r = self.root
+        r.title(APP_NAME)
+        r.configure(bg=BG)
         r.minsize(900, 600)
         try:
-            if EST_LINUX:
+            if IS_LINUX:
                 r.attributes("-zoomed", True)
             else:
                 r.state("zoomed")
         except tk.TclError:
             r.geometry("1280x860")
-        r.protocol("WM_DELETE_WINDOW", self.quitter)
-        mettre_icone(r)
+        r.protocol("WM_DELETE_WINDOW", self.quit_app)
+        set_icon(r)
         r.option_add("*TCombobox*Listbox.font", self.f_base)
         self._style()
 
     def _style(self):
         """Colors of drop-down lists and scrollbars (according to the theme)."""
-        r = self.racine
-        r.option_add("*TCombobox*Listbox.background", BLANC)
-        r.option_add("*TCombobox*Listbox.foreground", ENCRE)
-        r.option_add("*TCombobox*Listbox.selectBackground", BLEU)
-        r.option_add("*TCombobox*Listbox.selectForeground", SUR_ACCENT)
+        r = self.root
+        r.option_add("*TCombobox*Listbox.background", WHITE)
+        r.option_add("*TCombobox*Listbox.foreground", INK)
+        r.option_add("*TCombobox*Listbox.selectBackground", BLUE)
+        r.option_add("*TCombobox*Listbox.selectForeground", ON_ACCENT)
         style = ttk.Style(r)
         try:
             style.theme_use("clam")
         except tk.TclError:
             pass
-        style.configure("TCombobox", padding=6, fieldbackground=BLANC, background=BLANC,
-                        foreground=ENCRE, arrowcolor=ENCRE, arrowsize=22,
-                        bordercolor=BORDURE_FORTE)
-        style.map("TCombobox", fieldbackground=[("readonly", BLANC)],
-                  foreground=[("readonly", ENCRE)], selectbackground=[("readonly", BLANC)],
-                  selectforeground=[("readonly", ENCRE)])
-        style.configure("Vertical.TScrollbar", arrowsize=22, width=22, background=BARRE,
-                        troughcolor=FOND, arrowcolor=ENCRE, bordercolor=BORDURE)
+        style.configure("TCombobox", padding=6, fieldbackground=WHITE, background=WHITE,
+                        foreground=INK, arrowcolor=INK, arrowsize=22,
+                        bordercolor=BORDER_STRONG)
+        style.map("TCombobox", fieldbackground=[("readonly", WHITE)],
+                  foreground=[("readonly", INK)], selectbackground=[("readonly", WHITE)],
+                  selectforeground=[("readonly", INK)])
+        style.configure("Vertical.TScrollbar", arrowsize=22, width=22, background=BAR,
+                        troughcolor=BG, arrowcolor=INK, bordercolor=BORDER)
 
-    def bouton(self, parent, texte, commande, genre="normal", police=None, **options):
-        couleurs = {
-            "normal": (BLANC, ENCRE, BLEU_CLAIR),
-            "bleu": (BLEU, SUR_ACCENT, BLEU_FONCE),
-            "vert": (VERT, SUR_ACCENT, VERT_FONCE),
-            "danger": (BLANC, ROUGE, ROUGE_CLAIR),
-            "contour_bleu": (BLANC, BLEU_TEXTE, BLEU_CLAIR),
-        }[genre]
-        b = tk.Button(parent, text=texte, command=commande, font=police or self.f_gras,
-                      bg=couleurs[0], fg=couleurs[1], activebackground=couleurs[2],
-                      activeforeground=couleurs[1] if genre != "bleu" and genre != "vert" else SUR_ACCENT,
+    def button(self, parent, text_value, command, kind="normal", font=None, **options):
+        colors = {
+            "normal": (WHITE, INK, BLUE_LIGHT),
+            "blue": (BLUE, ON_ACCENT, BLUE_DARK),
+            "green": (GREEN, ON_ACCENT, GREEN_DARK),
+            "danger": (WHITE, RED, RED_LIGHT),
+            "blue_outline": (WHITE, BLUE_TEXT, BLUE_LIGHT),
+        }[kind]
+        b = tk.Button(parent, text=text_value, command=command, font=font or self.f_bold,
+                      bg=colors[0], fg=colors[1], activebackground=colors[2],
+                      activeforeground=colors[1] if kind != "blue" and kind != "green" else ON_ACCENT,
                       relief="solid", bd=1, padx=14, pady=6, cursor="hand2",
                       highlightthickness=0, **options)
         return b
 
-    def champ_texte(self, parent, variable, police=None):
-        return tk.Entry(parent, textvariable=variable, font=police or self.f_base,
-                        bg=BLANC, fg=ENCRE, relief="solid", bd=1, insertbackground=ENCRE,
+    def text_entry(self, parent, variable, font=None):
+        return tk.Entry(parent, textvariable=variable, font=font or self.f_base,
+                        bg=WHITE, fg=INK, relief="solid", bd=1, insertbackground=INK,
                         highlightthickness=2, highlightcolor="#E08A1E",
-                        highlightbackground=BORDURE, insertwidth=3)
+                        highlightbackground=BORDER, insertwidth=3)
 
     # ------------------------------------------------------------ construction
-    def _construire(self):
-        r = self.racine
+    def _build(self):
+        r = self.root
 
         # --- Header
         # 1st line: title + text size; 2nd line: the tabs (which wrap
         # when the window is narrow or the text very large).
-        entete = tk.Frame(r, bg=BLANC, padx=16, pady=8)
-        entete.pack(fill="x")
-        tk.Frame(r, bg=BORDURE, height=2).pack(fill="x")
-        ligne_titre = tk.Frame(entete, bg=BLANC)
-        ligne_titre.pack(fill="x")
-        tk.Label(ligne_titre, text=NOM_APPLI, font=self.f_titre, bg=BLANC,
-                 fg=ENCRE).pack(side="left")
-        self.zone_onglets = tk.Frame(entete, bg=BLANC)
-        self.zone_onglets.pack(fill="x", pady=(6, 0))
-        self.onglets = {}
-        for page, texte in (("compte", _("Mes mots de passe")), ("contact", _("Mes contacts")),
-                            ("documents", _("Mes documents")), ("reglages", "⚙ " + _("Réglages"))):
-            self.onglets[page] = self.bouton(self.zone_onglets, texte,
-                                             lambda p=page: self.afficher_page(p))
-        self.zone_onglets.bind("<Configure>", lambda e: self._placer_en_lignes(
-            self.zone_onglets, list(self.onglets.values()), ecart=6))
+        header = tk.Frame(r, bg=WHITE, padx=16, pady=8)
+        header.pack(fill="x")
+        tk.Frame(r, bg=BORDER, height=2).pack(fill="x")
+        title_row = tk.Frame(header, bg=WHITE)
+        title_row.pack(fill="x")
+        tk.Label(title_row, text=APP_NAME, font=self.f_title, bg=WHITE,
+                 fg=INK).pack(side="left")
+        self.tabs_area = tk.Frame(header, bg=WHITE)
+        self.tabs_area.pack(fill="x", pady=(6, 0))
+        self.tabs = {}
+        for page, text_value in (("account", _("My passwords")), ("contact", _("My contacts")),
+                                 ("documents", _("My documents")), ("settings", "⚙ " + _("Settings"))):
+            self.tabs[page] = self.button(self.tabs_area, text_value,
+                                          lambda p=page: self.show_page(p))
+        self.tabs_area.bind("<Configure>", lambda e: self._wrap_in_rows(
+            self.tabs_area, list(self.tabs.values()), gap=6))
 
-        zone_taille = tk.Frame(ligne_titre, bg=BLANC)
-        zone_taille.pack(side="right")
-        tk.Label(zone_taille, text=_("Texte"), font=self.f_gras, bg=BLANC,
-                 fg=GRIS).pack(side="left", padx=(0, 8))
-        self.boutons_taille = []
-        for i in range(len(TAILLES)):
-            police = tkfont.Font(family=self.famille, size=11 + i * 4, weight="bold")
-            b = tk.Button(zone_taille, text=_("A"), font=police, width=2,
-                          command=lambda i=i: self.appliquer_taille(i),
+        size_area = tk.Frame(title_row, bg=WHITE)
+        size_area.pack(side="right")
+        tk.Label(size_area, text=_("Text"), font=self.f_bold, bg=WHITE,
+                 fg=GREY).pack(side="left", padx=(0, 8))
+        self.size_buttons = []
+        for i in range(len(SIZES)):
+            font = tkfont.Font(family=self.family_name, size=11 + i * 4, weight="bold")
+            b = tk.Button(size_area, text=_("A"), font=font, width=2,
+                          command=lambda i=i: self.apply_size(i),
                           relief="solid", bd=1, cursor="hand2", highlightthickness=0)
             b.pack(side="left", padx=3)
-            self.boutons_taille.append(b)
+            self.size_buttons.append(b)
 
         # --- Letter bar
-        self.barre_lettres = tk.Frame(r, bg=BARRE, padx=12, pady=8)
-        self.barre_lettres.pack(fill="x")
-        self.sep_lettres = tk.Frame(r, bg=BORDURE, height=1)
-        self.sep_lettres.pack(fill="x")
-        self.boutons_lettres = {}
-        for lettre in LETTRES:
-            b = tk.Button(self.barre_lettres, text=_(lettre) if lettre == "Tout" else lettre, font=self.f_lettre,
+        self.letter_bar = tk.Frame(r, bg=BAR, padx=12, pady=8)
+        self.letter_bar.pack(fill="x")
+        self.letter_separator = tk.Frame(r, bg=BORDER, height=1)
+        self.letter_separator.pack(fill="x")
+        self.letter_buttons = {}
+        for letter in LETTERS:
+            b = tk.Button(self.letter_bar, text=_(letter) if letter == "All" else letter, font=self.f_letter,
                           relief="solid", bd=1, cursor="hand2", highlightthickness=0,
-                          padx=8 if lettre == "Tout" else 0, width=0 if lettre == "Tout" else 2,
-                          command=lambda l=lettre: self.choisir_lettre(l))
-            self.boutons_lettres[lettre] = b
-        self.barre_lettres.bind("<Configure>", lambda e: self._placer_lettres())
+                          padx=8 if letter == "All" else 0, width=0 if letter == "All" else 2,
+                          command=lambda l=letter: self.choose_letter(l))
+            self.letter_buttons[letter] = b
+        self.letter_bar.bind("<Configure>", lambda e: self._place_letters())
 
         # --- Footer (before the center so it stays visible)
-        pied = tk.Frame(r, bg=BLANC, padx=16, pady=8)
-        pied.pack(side="bottom", fill="x")
-        tk.Frame(r, bg=BORDURE, height=2).pack(side="bottom", fill="x")
+        footer = tk.Frame(r, bg=WHITE, padx=16, pady=8)
+        footer.pack(side="bottom", fill="x")
+        tk.Frame(r, bg=BORDER, height=2).pack(side="bottom", fill="x")
         # The button first: if the window is narrow, the sentence gets cut instead.
-        self.bouton(pied, _("Enregistrer maintenant"), self.enregistrer_maintenant,
-                    "vert").pack(side="right")
-        self.etiquette_etat = tk.Label(pied, text="", font=self.f_gras, bg=BLANC, fg=VERT_TEXTE)
-        self.etiquette_etat.pack(side="left")
-        self.etiquette_synchro = tk.Label(pied, text="", font=self.f_petit, bg=BLANC, fg=GRIS)
-        self.etiquette_synchro.pack(side="left", padx=(16, 0))
+        self.button(footer, _("Save now"), self.save_now,
+                    "green").pack(side="right")
+        self.status_label = tk.Label(footer, text="", font=self.f_bold, bg=WHITE, fg=GREEN_TEXT)
+        self.status_label.pack(side="left")
+        self.sync_label = tk.Label(footer, text="", font=self.f_small, bg=WHITE, fg=GREY)
+        self.sync_label.pack(side="left", padx=(16, 0))
 
         # --- Center
-        self.centre = tk.Frame(r, bg=FOND)
-        self.centre.pack(fill="both", expand=True)
-        self._page_fiches()
-        self._page_documents()
-        self._page_reglages()
+        self.center = tk.Frame(r, bg=BG)
+        self.center.pack(fill="both", expand=True)
+        self._cards_page()
+        self._documents_page()
+        self._settings_page()
 
-    def _placer_lettres(self):
+    def _place_letters(self):
         """Lay the letters out on one or more lines depending on the width."""
-        self._placer_en_lignes(self.barre_lettres, [self.boutons_lettres[l] for l in LETTRES],
-                               marge=24, ecart=3)
+        self._wrap_in_rows(self.letter_bar, [self.letter_buttons[l] for l in LETTERS],
+                           margin=24, gap=3)
 
-    def _placer_en_lignes(self, cadre, boutons, marge=0, ecart=3):
+    def _wrap_in_rows(self, frame, buttons, margin=0, gap=3):
         """Place buttons from left to right, wrapping to a new line if needed."""
-        largeur_dispo = max(cadre.winfo_width() - marge, 200)
-        ligne, colonne, x = 0, 0, 0
-        for b in boutons:
-            w = b.winfo_reqwidth() + 2 * ecart
-            if x + w > largeur_dispo and colonne > 0:
-                ligne, colonne, x = ligne + 1, 0, 0
-            b.grid(row=ligne, column=colonne, padx=ecart, pady=3, sticky="nsew")
-            colonne += 1
+        available_width = max(frame.winfo_width() - margin, 200)
+        line, col, x = 0, 0, 0
+        for b in buttons:
+            w = b.winfo_reqwidth() + 2 * gap
+            if x + w > available_width and col > 0:
+                line, col, x = line + 1, 0, 0
+            b.grid(row=line, column=col, padx=gap, pady=3, sticky="nsew")
+            col += 1
             x += w
 
     # ----------------------------------------------------------- cards page
-    def _page_fiches(self):
+    def _cards_page(self):
         """A single page, showing either the passwords or the contacts."""
-        p = self.page_fiches = tk.Frame(self.centre, bg=FOND, padx=16, pady=12)
+        p = self.cards_page = tk.Frame(self.center, bg=BG, padx=16, pady=12)
 
-        gauche = tk.Frame(p, bg=FOND)
-        gauche.pack(side="left", fill="y", padx=(0, 16))
-        self.titre_recherche = tk.Label(gauche, text="", font=self.f_gras, bg=FOND,
-                                        fg=ENCRE, anchor="w")
-        self.titre_recherche.pack(fill="x")
-        self.var_recherche = tk.StringVar()
-        self.var_recherche.trace_add("write", lambda *a: self._recherche_fiches_changee())
-        self.champ_texte(gauche, self.var_recherche).pack(fill="x", ipady=4, pady=(2, 6))
+        left = tk.Frame(p, bg=BG)
+        left.pack(side="left", fill="y", padx=(0, 16))
+        self.search_title = tk.Label(left, text="", font=self.f_bold, bg=BG,
+                                     fg=INK, anchor="w")
+        self.search_title.pack(fill="x")
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", lambda *a: self._cards_search_changed())
+        self.text_entry(left, self.search_var).pack(fill="x", ipady=4, pady=(2, 6))
 
-        ligne_cat = tk.Frame(gauche, bg=FOND)
-        ligne_cat.pack(fill="x", pady=(0, 4))
-        tk.Label(ligne_cat, text=_("Catégorie :"), font=self.f_petit, bg=FOND,
-                 fg=GRIS).pack(side="left")
-        self.var_filtre_cat = tk.StringVar(value=toutes_categories())
-        self.choix_filtre_cat = ttk.Combobox(ligne_cat, textvariable=self.var_filtre_cat,
-                                             font=self.f_petit, state="readonly", width=16)
-        self.choix_filtre_cat.pack(side="left", padx=(6, 0), fill="x", expand=True)
-        self.choix_filtre_cat.bind("<<ComboboxSelected>>", lambda e: self.remplir_liste_fiches())
+        category_row = tk.Frame(left, bg=BG)
+        category_row.pack(fill="x", pady=(0, 4))
+        tk.Label(category_row, text=_("Category:"), font=self.f_small, bg=BG,
+                 fg=GREY).pack(side="left")
+        self.category_filter_var = tk.StringVar(value=all_categories())
+        self.category_filter_choice = ttk.Combobox(category_row, textvariable=self.category_filter_var,
+                                                   font=self.f_small, state="readonly", width=16)
+        self.category_filter_choice.pack(side="left", padx=(6, 0), fill="x", expand=True)
+        self.category_filter_choice.bind("<<ComboboxSelected>>", lambda e: self.fill_cards_list())
 
-        self.etiquette_compte = tk.Label(gauche, text="", font=self.f_petit, bg=FOND,
-                                         fg=GRIS, anchor="w")
-        self.etiquette_compte.pack(fill="x")
+        self.count_label = tk.Label(left, text="", font=self.f_small, bg=BG,
+                                    fg=GREY, anchor="w")
+        self.count_label.pack(fill="x")
 
-        cadre_liste = tk.Frame(gauche, bg=FOND)
-        cadre_liste.pack(fill="both", expand=True, pady=6)
-        self.liste_fiches = tk.Listbox(
-            cadre_liste, font=self.f_base, width=26, activestyle="none",
-            bg=BLANC, fg=ENCRE, selectbackground=BLEU, selectforeground=SUR_ACCENT,
+        list_frame = tk.Frame(left, bg=BG)
+        list_frame.pack(fill="both", expand=True, pady=6)
+        self.cards_list = tk.Listbox(
+            list_frame, font=self.f_base, width=26, activestyle="none",
+            bg=WHITE, fg=INK, selectbackground=BLUE, selectforeground=ON_ACCENT,
             relief="solid", bd=1, highlightthickness=0, exportselection=False)
-        barre = ttk.Scrollbar(cadre_liste, orient="vertical",
-                              command=self.liste_fiches.yview)
-        self.liste_fiches.configure(yscrollcommand=barre.set)
-        self.liste_fiches.pack(side="left", fill="both", expand=True)
-        barre.pack(side="right", fill="y")
-        self.liste_fiches.bind("<<ListboxSelect>>", lambda e: self._fiche_choisie())
+        bar = ttk.Scrollbar(list_frame, orient="vertical",
+                            command=self.cards_list.yview)
+        self.cards_list.configure(yscrollcommand=bar.set)
+        self.cards_list.pack(side="left", fill="both", expand=True)
+        bar.pack(side="right", fill="y")
+        self.cards_list.bind("<<ListboxSelect>>", lambda e: self._card_selected())
 
-        self.bouton_nouvelle = self.bouton(gauche, "", self.creer_fiche, "contour_bleu")
-        self.bouton_nouvelle.pack(fill="x", pady=(4, 0))
+        self.new_button = self.button(left, "", self.create_card, "blue_outline")
+        self.new_button.pack(fill="x", pady=(4, 0))
 
         # Right side: the card, built from its fields
-        self.droite = tk.Frame(p, bg=BLANC, padx=22, pady=16,
-                               highlightthickness=2, highlightbackground=BORDURE)
-        self.droite.pack(side="left", fill="both", expand=True)
-        self.aucune_fiche = tk.Label(self.droite, text="", font=self.f_base, bg=BLANC,
-                                     fg=GRIS, justify="left")
-        self.zone_formulaire = tk.Frame(self.droite, bg=BLANC)
-        self.vars_fiche = {}
-        self.textes_fiche = {}
-        self.widgets_fiche = {}
-        self.champ_nom = None
-        self._focus_apres = None
+        self.right = tk.Frame(p, bg=WHITE, padx=22, pady=16,
+                              highlightthickness=2, highlightbackground=BORDER)
+        self.right.pack(side="left", fill="both", expand=True)
+        self.no_card = tk.Label(self.right, text="", font=self.f_base, bg=WHITE,
+                                fg=GREY, justify="left")
+        self.form_area = tk.Frame(self.right, bg=WHITE)
+        self.card_vars = {}
+        self.card_texts = {}
+        self.card_widgets = {}
+        self.name_entry = None
+        self._focus_after = None
 
     # ------------------------------------------------------------- card form
-    def _var_fiche(self, cle, valeur, index_perso=None):
-        var = tk.StringVar(value=valeur)
-        var.trace_add("write", lambda *a: self._valeur_changee(cle, var.get(), index_perso))
-        self.vars_fiche[cle if index_perso is None else ("perso", index_perso)] = var
+    def _card_var(self, key, value, custom_index=None):
+        var = tk.StringVar(value=value)
+        var.trace_add("write", lambda *a: self._value_changed(key, var.get(), custom_index))
+        self.card_vars[key if custom_index is None else ("custom", custom_index)] = var
         return var
 
-    def _zone_texte_fiche(self, parent, cle, valeur, hauteur):
-        zone = tk.Text(parent, font=self.f_base, height=hauteur, wrap="word",
-                       bg=BLANC, fg=ENCRE, relief="solid", bd=1, insertbackground=ENCRE,
+    def _card_text_area(self, parent, key, value, height):
+        area = tk.Text(parent, font=self.f_base, height=height, wrap="word",
+                       bg=WHITE, fg=INK, relief="solid", bd=1, insertbackground=INK,
                        highlightthickness=2, highlightcolor="#E08A1E",
-                       highlightbackground=BORDURE, padx=8, pady=6,
+                       highlightbackground=BORDER, padx=8, pady=6,
                        insertwidth=3, undo=True)
-        zone.insert("1.0", valeur)
-        zone.edit_modified(False)
-        zone.edit_reset()
-        zone.bind("<<Modified>>", lambda e: self._texte_change(cle))
-        self.textes_fiche[cle] = zone
-        return zone
+        area.insert("1.0", value)
+        area.edit_modified(False)
+        area.edit_reset()
+        area.bind("<<Modified>>", lambda e: self._text_changed(key))
+        self.card_texts[key] = area
+        return area
 
-    def _bouton_retirer(self, parent, ligne, cle, index_perso=None):
-        b = tk.Button(parent, text="✕", font=self.f_gras, width=2, command=lambda:
-                      self.retirer_champ(cle, index_perso), bg=BLANC, fg=ROUGE,
-                      activebackground=ROUGE_CLAIR, activeforeground=ROUGE,
+    def _remove_button(self, parent, line, key, custom_index=None):
+        b = tk.Button(parent, text="✕", font=self.f_bold, width=2, command=lambda:
+                      self.remove_field(key, custom_index), bg=WHITE, fg=RED,
+                      activebackground=RED_LIGHT, activeforeground=RED,
                       relief="solid", bd=1, cursor="hand2", highlightthickness=0)
-        b.grid(row=ligne, column=3, sticky="n", padx=(6, 0), pady=5)
+        b.grid(row=line, column=3, sticky="n", padx=(6, 0), pady=5)
         return b
 
-    def _libelle(self, parent, ligne, texte, haut=False):
-        tk.Label(parent, text=texte, font=self.f_gras, bg=BLANC, fg=GRIS, anchor="w",
+    def _label(self, parent, line, text_value, top=False):
+        tk.Label(parent, text=text_value, font=self.f_bold, bg=WHITE, fg=GREY, anchor="w",
                  justify="left", wraplength=220).grid(
-            row=ligne, column=0, sticky="nw" if haut else "w", pady=5, padx=(0, 12))
+            row=line, column=0, sticky="nw" if top else "w", pady=5, padx=(0, 12))
 
-    def _construire_formulaire(self, fiche):
-        for w in self.zone_formulaire.winfo_children():
+    def _build_form(self, card):
+        for w in self.form_area.winfo_children():
             w.destroy()
-        self.vars_fiche, self.textes_fiche, self.widgets_fiche = {}, {}, {}
-        genre = fiche.get("type", "compte")
-        facultatifs = CHAMPS_FACULTATIFS.get(genre, [])
-        self._chargement = True
+        self.card_vars, self.card_texts, self.card_widgets = {}, {}, {}
+        kind = card.get("type", "account")
+        optional = OPTIONAL_FIELDS.get(kind, [])
+        self._loading = True
 
-        f = tk.Frame(self.zone_formulaire, bg=BLANC)
+        f = tk.Frame(self.form_area, bg=WHITE)
         f.pack(fill="both", expand=True)
         f.columnconfigure(1, weight=1)
         r = 0
-        self._libelle(f, r, _("Nom"))
-        self.champ_nom = self.champ_texte(f, self._var_fiche("nom", fiche.get("nom", "")),
-                                          self.f_titre)
-        self.champ_nom.grid(row=r, column=1, columnspan=3, sticky="ew", pady=5, ipady=2)
+        self._label(f, r, _("Name"))
+        self.name_entry = self.text_entry(f, self._card_var("name", card.get("name", "")),
+                                          self.f_title)
+        self.name_entry.grid(row=r, column=1, columnspan=3, sticky="ew", pady=5, ipady=2)
         r += 1
 
-        for champ in ORDRE_CHAMPS.get(genre, []):
-            if champ == "notes" or not champ_visible(fiche, champ):
+        for field in FIELD_ORDER.get(kind, []):
+            if field == "notes" or not field_visible(card, field):
                 continue
-            libelle = _(LIBELLES_CHAMPS[champ])
-            valeur = fiche.get(champ, "")
-            if champ == "mdp":
-                self._cadre_mot_de_passe(f, r, valeur)
-            elif champ == "categorie":
-                self._libelle(f, r, libelle)
-                cadre = tk.Frame(f, bg=BLANC)
-                cadre.grid(row=r, column=1, columnspan=2, sticky="w", pady=5)
-                valeurs = [sans_categorie()] + self.carnet.noms_categories()
-                choix = ttk.Combobox(cadre, textvariable=self._var_fiche(
-                    "categorie", valeur or sans_categorie()), values=valeurs,
+            label = _(FIELD_LABELS[field])
+            value = card.get(field, "")
+            if field == "password":
+                self._password_frame(f, r, value)
+            elif field == "category":
+                self._label(f, r, label)
+                frame = tk.Frame(f, bg=WHITE)
+                frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=5)
+                value_list = [no_category()] + self.book.category_names()
+                selection = ttk.Combobox(frame, textvariable=self._card_var(
+                    "category", value or no_category()), values=value_list,
                     font=self.f_base, state="readonly", width=18)
-                choix.pack(side="left")
-                self.pastille_categorie = tk.Label(cadre, text="   ", font=self.f_base,
-                                                   bg=self.carnet.couleur_categorie(valeur) or BLANC,
-                                                   relief="solid", bd=1 if valeur else 0)
-                self.pastille_categorie.pack(side="left", padx=(8, 0), ipadx=4)
-                self.widgets_fiche[champ] = choix
-                self._bouton_retirer(f, r, champ)
-            elif champ == "adresse":
-                self._libelle(f, r, libelle, haut=True)
-                zone = self._zone_texte_fiche(f, champ, valeur, 3)
-                zone.grid(row=r, column=1, sticky="ew", pady=5)
-                b = self.bouton(f, _("Copier"), None)
-                b.configure(command=lambda b=b: self.copier(
-                    self.textes_fiche["adresse"].get("1.0", "end-1c"), b))
+                selection.pack(side="left")
+                self.category_badge = tk.Label(frame, text="   ", font=self.f_base,
+                                               bg=self.book.category_color(value) or WHITE,
+                                               relief="solid", bd=1 if value else 0)
+                self.category_badge.pack(side="left", padx=(8, 0), ipadx=4)
+                self.card_widgets[field] = selection
+                self._remove_button(f, r, field)
+            elif field == "address":
+                self._label(f, r, label, top=True)
+                area = self._card_text_area(f, field, value, 3)
+                area.grid(row=r, column=1, sticky="ew", pady=5)
+                b = self.button(f, _("Copy"), None)
+                b.configure(command=lambda b=b: self.copy(
+                    self.card_texts["address"].get("1.0", "end-1c"), b))
                 b.grid(row=r, column=2, sticky="new", padx=(10, 0), pady=5)
-                self.widgets_fiche[champ] = zone
-                if champ in facultatifs:
-                    self._bouton_retirer(f, r, champ)
+                self.card_widgets[field] = area
+                if field in optional:
+                    self._remove_button(f, r, field)
             else:
-                self._libelle(f, r, libelle)
-                champ_saisie = self.champ_texte(f, self._var_fiche(champ, valeur))
-                champ_saisie.grid(row=r, column=1, sticky="ew", pady=5, ipady=4)
-                self.widgets_fiche[champ] = champ_saisie
-                if champ == "site":
-                    b = self.bouton(f, _("Ouvrir"), self.ouvrir_site)
-                elif champ == "anniversaire":
+                self._label(f, r, label)
+                entry = self.text_entry(f, self._card_var(field, value))
+                entry.grid(row=r, column=1, sticky="ew", pady=5, ipady=4)
+                self.card_widgets[field] = entry
+                if field == "site":
+                    b = self.button(f, _("Open"), self.open_site)
+                elif field == "birthday":
                     b = None
                 else:
-                    b = self.bouton(f, _("Copier"), None)
-                    b.configure(command=lambda b=b, c=champ: self.copier(
-                        self.vars_fiche[c].get(), b))
+                    b = self.button(f, _("Copy"), None)
+                    b.configure(command=lambda b=b, c=field: self.copy(
+                        self.card_vars[c].get(), b))
                 if b is not None:
                     b.grid(row=r, column=2, sticky="ew", padx=(10, 0), pady=5)
-                if champ in facultatifs:
-                    self._bouton_retirer(f, r, champ)
+                if field in optional:
+                    self._remove_button(f, r, field)
             r += 1
 
         # Fields added by hand (customer no., secret question…)
-        for i, perso in enumerate(fiche.get("perso", [])):
-            self._libelle(f, r, perso.get("libelle", "") or _("Champ"))
-            champ_saisie = self.champ_texte(f, self._var_fiche("perso", perso.get("valeur", ""), i))
-            champ_saisie.grid(row=r, column=1, sticky="ew", pady=5, ipady=4)
-            self.widgets_fiche[("perso", i)] = champ_saisie
-            b = self.bouton(f, _("Copier"), None)
-            b.configure(command=lambda b=b, i=i: self.copier(self.vars_fiche[("perso", i)].get(), b))
+        for i, custom in enumerate(card.get("custom", [])):
+            self._label(f, r, custom.get("label", "") or _("Field"))
+            entry = self.text_entry(f, self._card_var("custom", custom.get("value", ""), i))
+            entry.grid(row=r, column=1, sticky="ew", pady=5, ipady=4)
+            self.card_widgets[("custom", i)] = entry
+            b = self.button(f, _("Copy"), None)
+            b.configure(command=lambda b=b, i=i: self.copy(self.card_vars[("custom", i)].get(), b))
             b.grid(row=r, column=2, sticky="ew", padx=(10, 0), pady=5)
-            self._bouton_retirer(f, r, "perso", i)
+            self._remove_button(f, r, "custom", i)
             r += 1
 
-        self.bouton(f, _("＋  Ajouter un champ"), self.ajouter_champ, "contour_bleu",
-                    police=self.f_petit).grid(row=r, column=1, sticky="w", pady=(4, 6))
+        self.button(f, _("＋  Add a field"), self.add_field, "blue_outline",
+                    font=self.f_small).grid(row=r, column=1, sticky="w", pady=(4, 6))
         r += 1
 
-        self._libelle(f, r, _("Notes"), haut=True)
-        notes = self._zone_texte_fiche(f, "notes", fiche.get("notes", ""), 4)
+        self._label(f, r, _("Notes"), top=True)
+        notes = self._card_text_area(f, "notes", card.get("notes", ""), 4)
         notes.grid(row=r, column=1, columnspan=3, sticky="nsew", pady=5)
         f.rowconfigure(r, weight=1)
         r += 1
 
-        source = fiche.get("source", "")
-        tk.Label(f, text=(_("Venu du document : ") + Path(source).name) if source else "",
-                 font=self.f_petit, bg=BLANC, fg=GRIS, anchor="w").grid(
+        source = card.get("source", "")
+        tk.Label(f, text=(_("From the document: ") + Path(source).name) if source else "",
+                 font=self.f_small, bg=WHITE, fg=GREY, anchor="w").grid(
             row=r, column=0, columnspan=4, sticky="w", pady=(4, 0))
         r += 1
-        ouvrir = tk.Frame(f, bg=BLANC)
-        ouvrir.grid(row=r, column=0, columnspan=4, sticky="w", pady=(4, 0))
-        tk.Label(ouvrir, text=_("Ouvrir sur l'ordinateur :"), font=self.f_petit, bg=BLANC,
-                 fg=GRIS).pack(side="left", padx=(0, 8))
-        self.bouton(ouvrir, _("La copie .txt"), lambda: self.ouvrir_fichier_fiche("txt"),
-                    police=self.f_petit).pack(side="left")
+        open_row = tk.Frame(f, bg=WHITE)
+        open_row.grid(row=r, column=0, columnspan=4, sticky="w", pady=(4, 0))
+        tk.Label(open_row, text=_("Open on the computer:"), font=self.f_small, bg=WHITE,
+                 fg=GREY).pack(side="left", padx=(0, 8))
+        self.button(open_row, _("The .txt copy"), lambda: self.open_card_file("txt"),
+                    font=self.f_small).pack(side="left")
         if source:
-            self.bouton(ouvrir, _("Le document d'origine"), lambda: self.ouvrir_fichier_fiche("source"),
-                        police=self.f_petit).pack(side="left", padx=(8, 0))
-        self.bouton(ouvrir, _("Le dossier"), lambda: self.ouvrir_fichier_fiche("dossier"),
-                    police=self.f_petit).pack(side="left", padx=(8, 0))
+            self.button(open_row, _("The original document"), lambda: self.open_card_file("source"),
+                        font=self.f_small).pack(side="left", padx=(8, 0))
+        self.button(open_row, _("The folder"), lambda: self.open_card_file("folder"),
+                    font=self.f_small).pack(side="left", padx=(8, 0))
         r += 1
-        self.bouton(f, _("Supprimer ce contact") if genre == "contact" else _("Supprimer cette fiche"),
-                    self.supprimer_fiche, "danger").grid(row=r, column=1, columnspan=3,
-                                                         sticky="e", pady=(10, 0))
-        self._chargement = False
+        self.button(f, _("Delete this contact") if kind == "contact" else _("Delete this card"),
+                    self.delete_card, "danger").grid(row=r, column=1, columnspan=3,
+                                                     sticky="e", pady=(10, 0))
+        self._loading = False
 
-        if self._focus_apres is not None:
-            widget = self.widgets_fiche.get(self._focus_apres)
-            self._focus_apres = None
+        if self._focus_after is not None:
+            widget = self.card_widgets.get(self._focus_after)
+            self._focus_after = None
             if widget is not None:
                 widget.focus_set()
 
-    def _cadre_mot_de_passe(self, f, r, valeur):
-        cadre = tk.Frame(f, bg=JAUNE_FOND, padx=14, pady=10,
-                         highlightthickness=2, highlightbackground=JAUNE_BORD)
-        cadre.grid(row=r, column=0, columnspan=4, sticky="ew", pady=(12, 8))
-        cadre.columnconfigure(0, weight=1)
-        tk.Label(cadre, text=_("Mot de passe"), font=self.f_gras, bg=JAUNE_FOND,
-                 fg=JAUNE_TEXTE, anchor="w").grid(row=0, column=0, sticky="w")
+    def _password_frame(self, f, r, value):
+        frame = tk.Frame(f, bg=YELLOW_BG, padx=14, pady=10,
+                         highlightthickness=2, highlightbackground=YELLOW_BORDER)
+        frame.grid(row=r, column=0, columnspan=4, sticky="ew", pady=(12, 8))
+        frame.columnconfigure(0, weight=1)
+        tk.Label(frame, text=_("Password"), font=self.f_bold, bg=YELLOW_BG,
+                 fg=YELLOW_TEXT, anchor="w").grid(row=0, column=0, sticky="w")
         # Password already saved: locked (avoids erasing it by mistake)
-        verrouille = bool(valeur)
-        saisie = tk.Entry(cadre, textvariable=self._var_fiche("mdp", valeur), font=self.f_mdp,
-                          bg=BLANC, fg=ENCRE, relief="solid", bd=1, highlightthickness=2,
-                          insertbackground=ENCRE, highlightcolor="#E08A1E",
-                          highlightbackground=JAUNE_BORD, insertwidth=3,
-                          readonlybackground=BLANC, state="readonly" if verrouille else "normal")
-        saisie.grid(row=1, column=0, sticky="ew", pady=(6, 8), ipady=4)
-        self.widgets_fiche["mdp"] = saisie
-        boutons = tk.Frame(cadre, bg=JAUNE_FOND)
-        boutons.grid(row=2, column=0, sticky="w")
-        b = self.bouton(boutons, _("Copier"), None)
-        b.configure(command=lambda: self.copier(self.vars_fiche["mdp"].get(), b))
+        locked = bool(value)
+        entry_widget = tk.Entry(frame, textvariable=self._card_var("password", value), font=self.f_password,
+                                bg=WHITE, fg=INK, relief="solid", bd=1, highlightthickness=2,
+                                insertbackground=INK, highlightcolor="#E08A1E",
+                                highlightbackground=YELLOW_BORDER, insertwidth=3,
+                                readonlybackground=WHITE, state="readonly" if locked else "normal")
+        entry_widget.grid(row=1, column=0, sticky="ew", pady=(6, 8), ipady=4)
+        self.card_widgets["password"] = entry_widget
+        buttons = tk.Frame(frame, bg=YELLOW_BG)
+        buttons.grid(row=2, column=0, sticky="w")
+        b = self.button(buttons, _("Copy"), None)
+        b.configure(command=lambda: self.copy(self.card_vars["password"].get(), b))
         b.pack(side="left", padx=(0, 10))
-        bouton_modifier = self.bouton(boutons, _("✎  Modifier à la main"), None)
+        edit_button = self.button(buttons, _("✎  Edit by hand"), None)
 
-        def basculer():
-            if saisie.cget("state") == "readonly":
-                saisie.configure(state="normal")
-                saisie.focus_set()
-                saisie.icursor("end")
-                bouton_modifier.configure(text=_("✔  Terminé"))
+        def toggle():
+            if entry_widget.cget("state") == "readonly":
+                entry_widget.configure(state="normal")
+                entry_widget.focus_set()
+                entry_widget.icursor("end")
+                edit_button.configure(text=_("✔  Done"))
             else:
-                saisie.configure(state="readonly")
-                bouton_modifier.configure(text=_("✎  Modifier à la main"))
+                entry_widget.configure(state="readonly")
+                edit_button.configure(text=_("✎  Edit by hand"))
 
-        bouton_modifier.configure(command=basculer)
-        if verrouille:
-            bouton_modifier.pack(side="left", padx=(0, 10))
-        self.bouton(boutons, _("↻  Créer un nouveau mot de passe"),
-                    self.ouvrir_generateur, "bleu").pack(side="left")
+        edit_button.configure(command=toggle)
+        if locked:
+            edit_button.pack(side="left", padx=(0, 10))
+        self.button(buttons, _("↻  Create a new password"),
+                    self.open_generator, "blue").pack(side="left")
 
     # ------------------------------------------------------ changes in the card
-    def _valeur_changee(self, cle, valeur, index_perso=None):
-        if self._chargement:
+    def _value_changed(self, key, value, custom_index=None):
+        if self._loading:
             return
-        fiche = self.carnet.trouver(self.id_courant)
-        if fiche is None:
+        card = self.book.find(self.current_id)
+        if card is None:
             return
-        if index_perso is not None:
-            persos = fiche.get("perso", [])
-            if index_perso < len(persos):
-                persos[index_perso]["valeur"] = valeur
+        if custom_index is not None:
+            customs = card.get("custom", [])
+            if custom_index < len(customs):
+                customs[custom_index]["value"] = value
         else:
-            if cle == "categorie" and valeur == sans_categorie():
-                valeur = ""
-            fiche[cle] = valeur
-            if cle in ("nom", "categorie"):
-                self._maj_ligne_liste(fiche)
-            if cle == "categorie" and hasattr(self, "pastille_categorie"):
-                couleur = self.carnet.couleur_categorie(valeur)
-                self.pastille_categorie.configure(bg=couleur or BLANC, bd=1 if couleur else 0)
-        fiche["modifie_le"] = datetime.now().isoformat(timespec="seconds")
-        fiche["modifiee_a_la_main"] = True   # synchronization will not overwrite it
-        self.programmer_enregistrement()
+            if key == "category" and value == no_category():
+                value = ""
+            card[key] = value
+            if key in ("name", "category"):
+                self._update_list_row(card)
+            if key == "category" and hasattr(self, "category_badge"):
+                color = self.book.category_color(value)
+                self.category_badge.configure(bg=color or WHITE, bd=1 if color else 0)
+        card["modified_at"] = datetime.now().isoformat(timespec="seconds")
+        card["edited_by_hand"] = True   # synchronization will not overwrite it
+        self.schedule_save()
 
-    def _texte_change(self, cle):
-        zone = self.textes_fiche.get(cle)
-        if zone is None or not zone.edit_modified():
+    def _text_changed(self, key):
+        area = self.card_texts.get(key)
+        if area is None or not area.edit_modified():
             return
-        zone.edit_modified(False)
-        self._valeur_changee(cle, zone.get("1.0", "end-1c"))
+        area.edit_modified(False)
+        self._value_changed(key, area.get("1.0", "end-1c"))
 
-    def _maj_ligne_liste(self, fiche):
-        if fiche["id"] not in self.ids_affiches:
+    def _update_list_row(self, card):
+        if card["id"] not in self.shown_ids:
             return
-        i = self.ids_affiches.index(fiche["id"])
-        self.liste_fiches.delete(i)
-        self.liste_fiches.insert(i, "  " + (fiche["nom"] or _("Sans nom")))
-        self._colorer_ligne(i, fiche)
-        self.liste_fiches.selection_set(i)
+        i = self.shown_ids.index(card["id"])
+        self.cards_list.delete(i)
+        self.cards_list.insert(i, "  " + (card["name"] or _("Untitled")))
+        self._color_row(i, card)
+        self.cards_list.selection_set(i)
 
-    def _colorer_ligne(self, i, fiche):
-        couleur = self.carnet.couleur_categorie(fiche.get("categorie", ""))
-        if couleur:
-            self.liste_fiches.itemconfig(i, background=couleur, foreground=TEXTE_SUR_PASTEL)
+    def _color_row(self, i, card):
+        color = self.book.category_color(card.get("category", ""))
+        if color:
+            self.cards_list.itemconfig(i, background=color, foreground=TEXT_ON_PASTEL)
         else:
-            self.liste_fiches.itemconfig(i, background=BLANC, foreground=ENCRE)
+            self.cards_list.itemconfig(i, background=WHITE, foreground=INK)
 
-    def ajouter_champ(self):
-        fiche = self.carnet.trouver(self.id_courant)
-        if fiche is None:
+    def add_field(self):
+        card = self.book.find(self.current_id)
+        if card is None:
             return
-        genre = fiche.get("type", "compte")
-        manquants = [c for c in CHAMPS_FACULTATIFS.get(genre, []) if not champ_visible(fiche, c)]
+        kind = card.get("type", "account")
+        missing = [c for c in OPTIONAL_FIELDS.get(kind, []) if not field_visible(card, c)]
 
-        f = tk.Toplevel(self.racine)
-        f.title(_("Ajouter un champ"))
-        f.configure(bg=BLANC, padx=24, pady=18)
-        f.transient(self.racine)
+        f = tk.Toplevel(self.root)
+        f.title(_("Add a field"))
+        f.configure(bg=WHITE, padx=24, pady=18)
+        f.transient(self.root)
         f.resizable(False, False)
-        tk.Label(f, text=_("Quel champ ajouter à cette fiche ?"), font=self.f_gras,
-                 bg=BLANC, fg=ENCRE).pack(anchor="w", pady=(0, 10))
+        tk.Label(f, text=_("Which field should be added to this card?"), font=self.f_bold,
+                 bg=WHITE, fg=INK).pack(anchor="w", pady=(0, 10))
 
-        def ajouter_standard(champ):
-            fiche.setdefault("champs_ajoutes", []).append(champ)
-            self._focus_apres = champ
+        def add_standard(field):
+            card.setdefault("added_fields", []).append(field)
+            self._focus_after = field
             f.destroy()
-            self.montrer_fiche(fiche)
-            self.programmer_enregistrement()
+            self.show_card(card)
+            self.schedule_save()
 
-        if manquants:
-            ligne = tk.Frame(f, bg=BLANC)
-            ligne.pack(anchor="w", pady=(0, 12))
-            for champ in manquants:
-                self.bouton(ligne, _(LIBELLES_CHAMPS[champ]),
-                            lambda c=champ: ajouter_standard(c)).pack(side="left", padx=(0, 8))
+        if missing:
+            line = tk.Frame(f, bg=WHITE)
+            line.pack(anchor="w", pady=(0, 12))
+            for field in missing:
+                self.button(line, _(FIELD_LABELS[field]),
+                            lambda c=field: add_standard(c)).pack(side="left", padx=(0, 8))
 
-        tk.Label(f, text=_("Ou un autre champ, à nommer (ex. : Numéro client, Question secrète) :"),
-                 font=self.f_petit, bg=BLANC, fg=GRIS).pack(anchor="w")
-        var_nom = tk.StringVar()
-        saisie = self.champ_texte(f, var_nom)
-        saisie.pack(fill="x", ipady=4, pady=(4, 12))
+        tk.Label(f, text=_("Or another field, with your own name (e.g. Customer number, Secret question):"),
+                 font=self.f_small, bg=WHITE, fg=GREY).pack(anchor="w")
+        name_var = tk.StringVar()
+        entry_widget = self.text_entry(f, name_var)
+        entry_widget.pack(fill="x", ipady=4, pady=(4, 12))
 
-        def ajouter_perso(_evenement=None):
-            nom = var_nom.get().strip()
-            if not nom:
-                saisie.focus_set()
+        def add_custom(_event=None):
+            name = name_var.get().strip()
+            if not name:
+                entry_widget.focus_set()
                 return
-            fiche.setdefault("perso", []).append({"libelle": nom, "valeur": ""})
-            self._focus_apres = ("perso", len(fiche["perso"]) - 1)
+            card.setdefault("custom", []).append({"label": name, "value": ""})
+            self._focus_after = ("custom", len(card["custom"]) - 1)
             f.destroy()
-            self.montrer_fiche(fiche)
-            self.programmer_enregistrement()
+            self.show_card(card)
+            self.schedule_save()
 
-        saisie.bind("<Return>", ajouter_perso)
-        boutons = tk.Frame(f, bg=BLANC)
-        boutons.pack(fill="x")
-        self.bouton(boutons, _("Annuler"), f.destroy).pack(side="right")
-        self.bouton(boutons, _("＋  Ajouter ce champ"), ajouter_perso, "bleu").pack(side="right", padx=10)
+        entry_widget.bind("<Return>", add_custom)
+        buttons = tk.Frame(f, bg=WHITE)
+        buttons.pack(fill="x")
+        self.button(buttons, _("Cancel"), f.destroy).pack(side="right")
+        self.button(buttons, _("＋  Add this field"), add_custom, "blue").pack(side="right", padx=10)
         f.grab_set()
-        saisie.focus_set()
+        entry_widget.focus_set()
 
-    def retirer_champ(self, cle, index_perso=None):
-        fiche = self.carnet.trouver(self.id_courant)
-        if fiche is None:
+    def remove_field(self, key, custom_index=None):
+        card = self.book.find(self.current_id)
+        if card is None:
             return
-        if index_perso is not None:
-            persos = fiche.get("perso", [])
-            if index_perso >= len(persos):
+        if custom_index is not None:
+            customs = card.get("custom", [])
+            if custom_index >= len(customs):
                 return
-            libelle, valeur = persos[index_perso].get("libelle", ""), persos[index_perso].get("valeur", "")
+            label, value = customs[custom_index].get("label", ""), customs[custom_index].get("value", "")
         else:
-            libelle, valeur = _(LIBELLES_CHAMPS.get(cle, cle)), fiche.get(cle, "")
-        if valeur and not messagebox.askyesno(
-                _("Retirer le champ ?"),
-                _("Retirer « {champ} » de cette fiche ?\n\nCe qui est écrit dedans sera effacé :",
-                  champ=libelle) + "\n" + valeur,
+            label, value = _(FIELD_LABELS.get(key, key)), card.get(key, "")
+        if value and not messagebox.askyesno(
+                _("Remove the field?"),
+                _("Remove “{field}” from this card?\n\nWhat is written in it will be erased:",
+                  field=label) + "\n" + value,
                 icon="warning", default="no"):
             return
-        if index_perso is not None:
-            del fiche["perso"][index_perso]
+        if custom_index is not None:
+            del card["custom"][custom_index]
         else:
-            fiche[cle] = ""
-            if cle in fiche.get("champs_ajoutes", []):
-                fiche["champs_ajoutes"].remove(cle)
-            if cle == "categorie":
-                self._maj_ligne_liste(fiche)
-        fiche["modifie_le"] = datetime.now().isoformat(timespec="seconds")
-        fiche["modifiee_a_la_main"] = True   # synchronization will not overwrite it
-        self.montrer_fiche(fiche)
-        self.programmer_enregistrement()
+            card[key] = ""
+            if key in card.get("added_fields", []):
+                card["added_fields"].remove(key)
+            if key == "category":
+                self._update_list_row(card)
+        card["modified_at"] = datetime.now().isoformat(timespec="seconds")
+        card["edited_by_hand"] = True   # synchronization will not overwrite it
+        self.show_card(card)
+        self.schedule_save()
 
     # ---------------------------------------------------------- settings page
-    def _carte(self, parent, titre, explication=""):
-        carte = tk.Frame(parent, bg=BLANC, padx=20, pady=16,
-                         highlightthickness=2, highlightbackground=BORDURE)
-        tk.Label(carte, text=titre, font=self.f_titre, bg=BLANC, fg=ENCRE,
+    def _section_card(self, parent, title_text, explanation=""):
+        card_frame = tk.Frame(parent, bg=WHITE, padx=20, pady=16,
+                              highlightthickness=2, highlightbackground=BORDER)
+        tk.Label(card_frame, text=title_text, font=self.f_title, bg=WHITE, fg=INK,
                  anchor="w").pack(fill="x")
-        if explication:
-            tk.Label(carte, text=explication, font=self.f_petit, bg=BLANC, fg=GRIS,
+        if explanation:
+            tk.Label(card_frame, text=explanation, font=self.f_small, bg=WHITE, fg=GREY,
                      anchor="w", justify="left", wraplength=520).pack(fill="x", pady=(2, 10))
-        return carte
+        return card_frame
 
-    def _page_reglages(self):
-        p = self.page_reglages = tk.Frame(self.centre, bg=FOND, padx=16, pady=12)
+    def _settings_page(self):
+        p = self.settings_page = tk.Frame(self.center, bg=BG, padx=16, pady=12)
 
-        colonne_gauche = tk.Frame(p, bg=FOND)
-        colonne_gauche.pack(side="left", fill="both", expand=True, padx=(0, 16))
+        left_column = tk.Frame(p, bg=BG)
+        left_column.pack(side="left", fill="both", expand=True, padx=(0, 16))
 
         # --- About (bottom left)
-        apropos = self._carte(colonne_gauche, _("À propos"),
-                              _("Pocket Book {version} — fonctionne entièrement sans internet : "
-                                "rien ne quitte cet ordinateur.", version=VERSION))
-        apropos.pack(side="bottom", fill="x", pady=(16, 0))
-        tk.Label(apropos, text=_("Vos données sont ici :") + f"\n{DOSSIER_DONNEES}", font=self.f_petit,
-                 bg=BLANC, fg=ENCRE, anchor="w", justify="left", wraplength=520).pack(fill="x")
-        ligne_apropos = tk.Frame(apropos, bg=BLANC)
-        ligne_apropos.pack(fill="x", pady=(10, 0))
-        self.bouton(ligne_apropos, _("Ouvrir le dossier des données"),
-                    lambda: ouvrir_avec_systeme(DOSSIER_DONNEES)).pack(side="left")
-        if installation_possible() and meme_fichier(sys.executable, chemins_installation()["exe"]):
-            self.bouton(ligne_apropos, _("Désinstaller…"), self.desinstaller_depuis_reglages,
+        about = self._section_card(left_column, _("About"),
+                                   _("Pocket Book {version} — works entirely without internet: "
+                                     "nothing leaves this computer.", version=VERSION))
+        about.pack(side="bottom", fill="x", pady=(16, 0))
+        tk.Label(about, text=_("Your data is here:") + f"\n{DATA_FOLDER}", font=self.f_small,
+                 bg=WHITE, fg=INK, anchor="w", justify="left", wraplength=520).pack(fill="x")
+        about_row = tk.Frame(about, bg=WHITE)
+        about_row.pack(fill="x", pady=(10, 0))
+        self.button(about_row, _("Open the data folder"),
+                    lambda: open_with_system(DATA_FOLDER)).pack(side="left")
+        if can_install() and same_file(sys.executable, install_paths()["exe"]):
+            self.button(about_row, _("Uninstall…"), self.uninstall_from_settings,
                         "danger").pack(side="right")
 
         # --- Categories
-        cat = self._carte(colonne_gauche, _("Catégories"),
-                          _("Les catégories servent à trier les fiches. Chacune a sa couleur, "
-                          "qui apparaît dans la liste des fiches."))
+        cat = self._section_card(left_column, _("Categories"),
+                                 _("Categories are used to sort cards. Each one has its own colour, "
+                                   "shown in the list of cards."))
         cat.pack(side="top", fill="both", expand=True)
-        cadre = tk.Frame(cat, bg=BLANC)
-        cadre.pack(fill="both", expand=True)
-        self.liste_categories = tk.Listbox(
-            cadre, font=self.f_base, activestyle="none", height=10,
-            bg=BLANC, fg=ENCRE, selectbackground=BLEU, selectforeground=SUR_ACCENT,
+        frame = tk.Frame(cat, bg=WHITE)
+        frame.pack(fill="both", expand=True)
+        self.category_list = tk.Listbox(
+            frame, font=self.f_base, activestyle="none", height=10,
+            bg=WHITE, fg=INK, selectbackground=BLUE, selectforeground=ON_ACCENT,
             relief="solid", bd=1, highlightthickness=0, exportselection=False)
-        barre = ttk.Scrollbar(cadre, orient="vertical", command=self.liste_categories.yview)
-        self.liste_categories.configure(yscrollcommand=barre.set)
-        self.liste_categories.pack(side="left", fill="both", expand=True)
-        barre.pack(side="right", fill="y")
-        boutons = tk.Frame(cat, bg=BLANC)
-        boutons.pack(fill="x", pady=(10, 0))
-        self.bouton(boutons, _("＋  Nouvelle"), self.nouvelle_categorie, "bleu").pack(side="left")
-        self.bouton(boutons, _("Renommer"), self.renommer_categorie).pack(side="left", padx=(8, 0))
-        self.bouton(boutons, _("Couleur…"), self.couleur_categorie).pack(side="left", padx=(8, 0))
-        self.bouton(boutons, _("Supprimer"), self.supprimer_categorie, "danger").pack(side="right")
+        bar = ttk.Scrollbar(frame, orient="vertical", command=self.category_list.yview)
+        self.category_list.configure(yscrollcommand=bar.set)
+        self.category_list.pack(side="left", fill="both", expand=True)
+        bar.pack(side="right", fill="y")
+        buttons = tk.Frame(cat, bg=WHITE)
+        buttons.pack(fill="x", pady=(10, 0))
+        self.button(buttons, _("＋  New"), self.new_category, "blue").pack(side="left")
+        self.button(buttons, _("Rename"), self.rename_category).pack(side="left", padx=(8, 0))
+        self.button(buttons, _("Colour…"), self.category_color).pack(side="left", padx=(8, 0))
+        self.button(buttons, _("Delete"), self.delete_category, "danger").pack(side="right")
 
-        droite = tk.Frame(p, bg=FOND)
-        droite.pack(side="left", fill="both", expand=True)
+        right = tk.Frame(p, bg=BG)
+        right.pack(side="left", fill="both", expand=True)
 
         # --- Language
-        langue = self._carte(droite, _("Langue"))
-        langue.pack(fill="x", pady=(0, 16))
-        ligne_langues = tk.Frame(langue, bg=BLANC)
-        ligne_langues.pack(fill="x")
-        for code, nom in LANGUES.items():
-            actif = code == langue_actuelle()
-            tk.Button(ligne_langues, text=("✔ " if actif else "") + nom, font=self.f_gras,
-                      bg=BLEU if actif else BLANC, fg=SUR_ACCENT if actif else ENCRE,
-                      activebackground=BLEU_FONCE if actif else BLEU_CLAIR,
-                      activeforeground=SUR_ACCENT if actif else ENCRE, relief="solid", bd=1,
+        language = self._section_card(right, _("Language"))
+        language.pack(fill="x", pady=(0, 16))
+        languages_row = tk.Frame(language, bg=WHITE)
+        languages_row.pack(fill="x")
+        for code, name in LANGUAGES.items():
+            active = code == current_language()
+            tk.Button(languages_row, text=("✔ " if active else "") + name, font=self.f_bold,
+                      bg=BLUE if active else WHITE, fg=ON_ACCENT if active else INK,
+                      activebackground=BLUE_DARK if active else BLUE_LIGHT,
+                      activeforeground=ON_ACCENT if active else INK, relief="solid", bd=1,
                       padx=10, pady=6, cursor="hand2", highlightthickness=0,
-                      command=lambda c=code: self.choisir_langue_interface(c)).pack(
+                      command=lambda c=code: self.choose_interface_language(c)).pack(
                 side="left", padx=(0, 6), pady=2)
 
         # --- Themes
-        theme = self._carte(droite, _("Couleurs de l'écran"),
-                            _("Choisissez ce qui est le plus agréable à lire."))
+        theme = self._section_card(right, _("Screen colours"),
+                                   _("Choose whatever is easiest to read."))
         theme.pack(fill="x")
-        grille = tk.Frame(theme, bg=BLANC)
-        grille.pack(fill="x")
-        actuel = self.carnet.reglages.get("theme", "clair")
-        for i, (cle, t) in enumerate(THEMES.items()):
-            actif = cle == actuel
-            b = tk.Button(grille, text=("✔  " if actif else "") + _(t["nom"]), font=self.f_gras,
-                          bg=t["FOND"], fg=t["ENCRE"], activebackground=t["BLANC"],
-                          activeforeground=t["ENCRE"], relief="solid", bd=4 if actif else 1,
+        grid_frame = tk.Frame(theme, bg=WHITE)
+        grid_frame.pack(fill="x")
+        current = self.book.settings.get("theme", "light")
+        for i, (key, t) in enumerate(THEMES.items()):
+            active = key == current
+            b = tk.Button(grid_frame, text=("✔  " if active else "") + _(t["name"]), font=self.f_bold,
+                          bg=t["BG"], fg=t["INK"], activebackground=t["WHITE"],
+                          activeforeground=t["INK"], relief="solid", bd=4 if active else 1,
                           padx=14, pady=12, cursor="hand2", highlightthickness=0,
-                          command=lambda c=cle: self.choisir_theme(c))
+                          command=lambda c=key: self.choose_theme(c))
             b.grid(row=i // 2, column=i % 2, sticky="ew", padx=4, pady=4)
-        grille.columnconfigure(0, weight=1)
-        grille.columnconfigure(1, weight=1)
+        grid_frame.columnconfigure(0, weight=1)
+        grid_frame.columnconfigure(1, weight=1)
 
         # --- .txt copy
-        txt = self._carte(droite, _("Copie des fiches en .txt"),
-                          _("Chaque fiche est recopiée dans un fichier .txt, mis à jour tout seul. "
-                          "Les changements se font dans le carnet, pas dans les .txt."))
+        txt = self._section_card(right, _("Copy of cards as .txt"),
+                                 _("Each card is copied into a .txt file that updates itself. Make "
+                                   "changes in the notebook, not in the .txt files."))
         txt.pack(fill="x", pady=(16, 0))
-        self.etiquette_txt = tk.Label(txt, text="", font=self.f_petit, bg=BLANC, fg=ENCRE,
-                                      anchor="w", justify="left", wraplength=520)
-        self.etiquette_txt.pack(fill="x")
-        ligne = tk.Frame(txt, bg=BLANC)
-        ligne.pack(fill="x", pady=(10, 0))
-        self.bouton(ligne, _("Changer de dossier…"), self.choisir_dossier_txt).pack(side="left")
-        self.bouton(ligne, _("Ouvrir le dossier"), self.ouvrir_dossier_txt).pack(side="left", padx=8)
+        self.txt_label = tk.Label(txt, text="", font=self.f_small, bg=WHITE, fg=INK,
+                                  anchor="w", justify="left", wraplength=520)
+        self.txt_label.pack(fill="x")
+        line = tk.Frame(txt, bg=WHITE)
+        line.pack(fill="x", pady=(10, 0))
+        self.button(line, _("Change folder…"), self.choose_txt_folder).pack(side="left")
+        self.button(line, _("Open the folder"), self.open_txt_folder).pack(side="left", padx=8)
 
-    def desinstaller_depuis_reglages(self):
-        self.enregistrer()
-        if fenetre_desinstallation(self.racine):
-            self.racine.destroy()
+    def uninstall_from_settings(self):
+        self.save()
+        if uninstall_window(self.root):
+            self.root.destroy()
 
-    def remplir_categories(self, choisir=None):
-        self.liste_categories.delete(0, "end")
-        for i, c in enumerate(self.carnet.categories()):
-            n = self.carnet.nb_fiches_categorie(c["nom"])
-            self.liste_categories.insert("end", f"  {c['nom']}   (" + n_(n, "{n} fiche", "{n} fiches") + ")")
-            self.liste_categories.itemconfig(i, background=c.get("couleur") or BLANC,
-                                             foreground=TEXTE_SUR_PASTEL if c.get("couleur") else ENCRE)
-            if c["nom"] == choisir:
-                self.liste_categories.selection_set(i)
-                self.liste_categories.see(i)
+    def fill_categories(self, choose=None):
+        self.category_list.delete(0, "end")
+        for i, c in enumerate(self.book.categories()):
+            n = self.book.category_card_count(c["name"])
+            self.category_list.insert("end", f"  {c['name']}   (" + n_(n, "{n} card", "{n} cards") + ")")
+            self.category_list.itemconfig(i, background=c.get("color") or WHITE,
+                                          foreground=TEXT_ON_PASTEL if c.get("color") else INK)
+            if c["name"] == choose:
+                self.category_list.selection_set(i)
+                self.category_list.see(i)
 
-    def _categorie_choisie(self):
-        choix = self.liste_categories.curselection()
-        if not choix:
-            messagebox.showinfo(NOM_APPLI, _("Cliquez d'abord sur une catégorie dans la liste."))
+    def _selected_category(self):
+        selection = self.category_list.curselection()
+        if not selection:
+            messagebox.showinfo(APP_NAME, _("First click on a category in the list."))
             return None
-        return self.carnet.categories()[choix[0]]["nom"]
+        return self.book.categories()[selection[0]]["name"]
 
-    def _categories_changees(self, choisir=None):
-        self.remplir_categories(choisir)
-        self.programmer_enregistrement()
+    def _categories_changed(self, choose=None):
+        self.fill_categories(choose)
+        self.schedule_save()
 
-    def nouvelle_categorie(self):
-        nom = demander_texte(self, _("Nouvelle catégorie"), _("Nom de la nouvelle catégorie :"))
-        if nom is None:
+    def new_category(self):
+        name = ask_text(self, _("New category"), _("Name of the new category:"))
+        if name is None:
             return
-        if not self.carnet.ajouter_categorie(nom):
-            messagebox.showinfo(NOM_APPLI, _("La catégorie « {nom} » existe déjà.", nom=nom.strip()))
+        if not self.book.add_category(name):
+            messagebox.showinfo(APP_NAME, _("The category “{name}” already exists.", name=name.strip()))
             return
-        self._categories_changees(nom.strip())
+        self._categories_changed(name.strip())
 
-    def renommer_categorie(self):
-        ancien = self._categorie_choisie()
-        if ancien is None:
+    def rename_category(self):
+        old = self._selected_category()
+        if old is None:
             return
-        nouveau = demander_texte(self, _("Renommer la catégorie"), _("Nouveau nom :"), ancien)
-        if nouveau is None or nouveau.strip() == ancien:
+        new = ask_text(self, _("Rename the category"), _("New name:"), old)
+        if new is None or new.strip() == old:
             return
-        if not self.carnet.renommer_categorie(ancien, nouveau):
-            messagebox.showinfo(NOM_APPLI, _("La catégorie « {nom} » existe déjà.", nom=nouveau.strip()))
+        if not self.book.rename_category(old, new):
+            messagebox.showinfo(APP_NAME, _("The category “{name}” already exists.", name=new.strip()))
             return
-        self._categories_changees(nouveau.strip())
+        self._categories_changed(new.strip())
 
-    def couleur_categorie(self):
-        nom = self._categorie_choisie()
-        if nom is None:
+    def category_color(self):
+        name = self._selected_category()
+        if name is None:
             return
-        couleur = choisir_couleur(self, nom)
-        if couleur is None:
+        color = choose_color(self, name)
+        if color is None:
             return
-        for c in self.carnet.categories():
-            if c["nom"] == nom:
-                c["couleur"] = couleur
-        self._categories_changees(nom)
+        for c in self.book.categories():
+            if c["name"] == name:
+                c["color"] = color
+        self._categories_changed(name)
 
-    def supprimer_categorie(self):
-        nom = self._categorie_choisie()
-        if nom is None:
+    def delete_category(self):
+        name = self._selected_category()
+        if name is None:
             return
-        n = self.carnet.nb_fiches_categorie(nom)
-        texte = _("Supprimer la catégorie « {nom} » ?", nom=nom)
+        n = self.book.category_card_count(name)
+        text_value = _("Delete the category “{name}”?", name=name)
         if n:
-            texte += "\n\n" + n_(n, "{n} fiche n'aura plus de catégorie (la fiche elle-même n'est pas supprimée).",
-                                 "{n} fiches n'auront plus de catégorie (les fiches elles-mêmes ne sont pas supprimées).")
-        if not messagebox.askyesno(_("Supprimer la catégorie ?"), texte, icon="warning", default="no"):
+            text_value += "\n\n" + n_(n, "{n} card will no longer have a category (the card itself is not deleted).",
+                                      "{n} cards will no longer have a category (the cards themselves are not deleted).")
+        if not messagebox.askyesno(_("Delete the category?"), text_value, icon="warning", default="no"):
             return
-        self.carnet.supprimer_categorie(nom)
-        self._categories_changees()
+        self.book.delete_category(name)
+        self._categories_changed()
 
-    def choisir_langue_interface(self, code):
-        if code == langue_actuelle():
+    def choose_interface_language(self, code):
+        if code == current_language():
             return
-        choisir_langue(code)
-        self.carnet.reglages["langue"] = code
-        self._reconstruire()
-        self.programmer_enregistrement()  # the .txt copies are rewritten in the new language
+        set_language(code)
+        self.book.settings["language"] = code
+        self._rebuild()
+        self.schedule_save()  # the .txt copies are rewritten in the new language
 
-    def choisir_theme(self, cle):
-        if cle == self.carnet.reglages.get("theme", "clair"):
+    def choose_theme(self, key):
+        if key == self.book.settings.get("theme", "light"):
             return
-        self.carnet.reglages["theme"] = cle
-        appliquer_theme_couleurs(cle)
-        self._reconstruire()
-        self.programmer_enregistrement()
+        self.book.settings["theme"] = key
+        apply_theme_colors(key)
+        self._rebuild()
+        self.schedule_save()
 
-    def _reconstruire(self):
+    def _rebuild(self):
         """Redraw the whole window (after a theme change)."""
         page = self.page
-        for w in self.racine.winfo_children():
+        for w in self.root.winfo_children():
             w.destroy()
-        self.racine.configure(bg=FOND)
+        self.root.configure(bg=BG)
         self._style()
-        self._construire()
-        self.appliquer_taille(self.carnet.reglages.get("taille_texte", 1), enregistrer=False)
-        self._afficher_dossier()
-        self.afficher_page(page)
+        self._build()
+        self.apply_size(self.book.settings.get("text_size", 1), save=False)
+        self._show_folder()
+        self.show_page(page)
 
     # --------------------------------------------------------- documents page
-    def _page_documents(self):
-        p = self.page_documents = tk.Frame(self.centre, bg=FOND, padx=16, pady=12)
+    def _documents_page(self):
+        p = self.documents_page = tk.Frame(self.center, bg=BG, padx=16, pady=12)
 
-        haut = tk.Frame(p, bg=FOND)
-        haut.pack(fill="x", pady=(0, 8))
-        self.etiquette_dossier = tk.Label(haut, text="", font=self.f_base, bg=FOND,
-                                          fg=ENCRE, anchor="w", justify="left")
-        self.etiquette_dossier.pack(fill="x")
-        self.zone_boutons_docs = tk.Frame(p, bg=FOND)
-        self.zone_boutons_docs.pack(fill="x", pady=(0, 4))
-        boutons_docs = [
-            self.bouton(self.zone_boutons_docs, _("↻  Synchroniser maintenant"),
-                        self.synchroniser_maintenant, "vert"),
-            self.bouton(self.zone_boutons_docs, _("Choisir le dossier…"), self.choisir_dossier),
-            self.bouton(self.zone_boutons_docs, _("Importer des fichiers…"),
-                        self.choisir_fichiers_a_importer),
+        top = tk.Frame(p, bg=BG)
+        top.pack(fill="x", pady=(0, 8))
+        self.folder_label = tk.Label(top, text="", font=self.f_base, bg=BG,
+                                     fg=INK, anchor="w", justify="left")
+        self.folder_label.pack(fill="x")
+        self.doc_buttons_area = tk.Frame(p, bg=BG)
+        self.doc_buttons_area.pack(fill="x", pady=(0, 4))
+        doc_buttons = [
+            self.button(self.doc_buttons_area, _("↻  Sync now"),
+                        self.sync_now, "green"),
+            self.button(self.doc_buttons_area, _("Choose the folder…"), self.choose_folder),
+            self.button(self.doc_buttons_area, _("Import files…"),
+                        self.choose_files_to_import),
         ]
-        self.zone_boutons_docs.bind("<Configure>", lambda e: self._placer_en_lignes(
-            self.zone_boutons_docs, boutons_docs, ecart=4))
-        self.var_synchro = tk.BooleanVar(value=bool(self.carnet.reglages.get("synchro_auto", True)))
-        tk.Checkbutton(p, text=_("Ranger tout seul les documents de ce dossier "
-                               "(nouveaux et modifiés), à chaque ouverture et toutes les minutes"),
-                       variable=self.var_synchro, command=self._synchro_auto_changee,
-                       font=self.f_petit, bg=FOND, fg=ENCRE, activebackground=FOND,
-                       activeforeground=ENCRE, selectcolor=BLANC, anchor="w",
+        self.doc_buttons_area.bind("<Configure>", lambda e: self._wrap_in_rows(
+            self.doc_buttons_area, doc_buttons, gap=4))
+        self.sync_var = tk.BooleanVar(value=bool(self.book.settings.get("auto_sync", True)))
+        tk.Checkbutton(p, text=_("File the documents in this folder automatically (new and "
+                                 "changed ones), at every start and every minute"),
+                       variable=self.sync_var, command=self._auto_sync_changed,
+                       font=self.f_small, bg=BG, fg=INK, activebackground=BG,
+                       activeforeground=INK, selectcolor=WHITE, anchor="w",
                        justify="left").pack(fill="x", pady=(0, 8))
 
-        filtres = tk.Frame(p, bg=FOND)
-        filtres.pack(fill="x", pady=(0, 8))
-        tk.Label(filtres, text=_("Montrer :"), font=self.f_gras, bg=FOND, fg=GRIS).pack(
+        filters = tk.Frame(p, bg=BG)
+        filters.pack(fill="x", pady=(0, 8))
+        tk.Label(filters, text=_("Show:"), font=self.f_bold, bg=BG, fg=GREY).pack(
             side="left", anchor="n", pady=(8, 0))
-        zone_filtres = tk.Frame(filtres, bg=FOND)
-        zone_filtres.pack(side="left", fill="x", expand=True, padx=(4, 0))
+        filters_area = tk.Frame(filters, bg=BG)
+        filters_area.pack(side="left", fill="x", expand=True, padx=(4, 0))
         # By default: only what is left to file (the rest is already in the book)
-        self.filtre_genre = getattr(self, "filtre_genre", "a_ranger")
-        self.boutons_filtre = {}
-        for genre, texte in (("a_ranger", _("À ranger")), ("tous", _("Tout")),
-                             ("compte", _("Mots de passe")), ("contact", _("Contacts")),
-                             ("autre", _("Non reconnus"))):
-            self.boutons_filtre[genre] = self.bouton(zone_filtres, texte,
-                                                     lambda g=genre: self.choisir_filtre(g))
-        zone_filtres.bind("<Configure>", lambda e: self._placer_en_lignes(
-            zone_filtres, list(self.boutons_filtre.values()), ecart=4))
+        self.kind_filter = getattr(self, "kind_filter", "to_file")
+        self.filter_buttons = {}
+        for kind, text_value in (("to_file", _("To file")), ("all", _("All")),
+                                 ("account", _("Passwords")), ("contact", _("Contacts")),
+                                 ("other", _("Not recognised"))):
+            self.filter_buttons[kind] = self.button(filters_area, text_value,
+                                                    lambda g=kind: self.choose_filter(g))
+        filters_area.bind("<Configure>", lambda e: self._wrap_in_rows(
+            filters_area, list(self.filter_buttons.values()), gap=4))
 
-        corps = tk.Frame(p, bg=FOND)
-        corps.pack(fill="both", expand=True)
+        body = tk.Frame(p, bg=BG)
+        body.pack(fill="both", expand=True)
 
-        gauche = tk.Frame(corps, bg=FOND)
-        gauche.pack(side="left", fill="y", padx=(0, 16))
-        tk.Label(gauche, text=_("Chercher dans les documents"), font=self.f_gras,
-                 bg=FOND, fg=ENCRE, anchor="w").pack(fill="x")
-        self.var_recherche_docs = tk.StringVar()
-        self.var_recherche_docs.trace_add("write", lambda *a: self._recherche_docs_changee())
-        self.champ_texte(gauche, self.var_recherche_docs).pack(fill="x", ipady=4, pady=(2, 6))
-        self.etiquette_compte_docs = tk.Label(gauche, text="", font=self.f_petit,
-                                              bg=FOND, fg=GRIS, anchor="w", justify="left")
-        self.etiquette_compte_docs.pack(fill="x")
-        cadre_liste = tk.Frame(gauche, bg=FOND)
-        cadre_liste.pack(fill="both", expand=True, pady=6)
-        self.liste_docs = tk.Listbox(
-            cadre_liste, font=self.f_base, width=32, activestyle="none",
-            bg=BLANC, fg=ENCRE, selectbackground=BLEU, selectforeground=SUR_ACCENT,
+        left = tk.Frame(body, bg=BG)
+        left.pack(side="left", fill="y", padx=(0, 16))
+        tk.Label(left, text=_("Search in the documents"), font=self.f_bold,
+                 bg=BG, fg=INK, anchor="w").pack(fill="x")
+        self.docs_search_var = tk.StringVar()
+        self.docs_search_var.trace_add("write", lambda *a: self._docs_search_changed())
+        self.text_entry(left, self.docs_search_var).pack(fill="x", ipady=4, pady=(2, 6))
+        self.docs_count_label = tk.Label(left, text="", font=self.f_small,
+                                         bg=BG, fg=GREY, anchor="w", justify="left")
+        self.docs_count_label.pack(fill="x")
+        list_frame = tk.Frame(left, bg=BG)
+        list_frame.pack(fill="both", expand=True, pady=6)
+        self.docs_list = tk.Listbox(
+            list_frame, font=self.f_base, width=32, activestyle="none",
+            bg=WHITE, fg=INK, selectbackground=BLUE, selectforeground=ON_ACCENT,
             relief="solid", bd=1, highlightthickness=0, exportselection=False)
-        barre = ttk.Scrollbar(cadre_liste, orient="vertical", command=self.liste_docs.yview)
-        self.liste_docs.configure(yscrollcommand=barre.set)
-        self.liste_docs.pack(side="left", fill="both", expand=True)
-        barre.pack(side="right", fill="y")
-        self.liste_docs.bind("<<ListboxSelect>>", lambda e: self._document_choisi())
+        bar = ttk.Scrollbar(list_frame, orient="vertical", command=self.docs_list.yview)
+        self.docs_list.configure(yscrollcommand=bar.set)
+        self.docs_list.pack(side="left", fill="both", expand=True)
+        bar.pack(side="right", fill="y")
+        self.docs_list.bind("<<ListboxSelect>>", lambda e: self._document_selected())
 
-        droite = tk.Frame(corps, bg=BLANC, padx=22, pady=16,
-                          highlightthickness=2, highlightbackground=BORDURE)
-        droite.pack(side="left", fill="both", expand=True)
-        self.titre_doc = tk.Label(droite, text=_("Choisissez un document dans la liste."),
-                                  font=self.f_titre, bg=BLANC, fg=ENCRE, anchor="w",
+        right = tk.Frame(body, bg=WHITE, padx=22, pady=16,
+                         highlightthickness=2, highlightbackground=BORDER)
+        right.pack(side="left", fill="both", expand=True)
+        self.doc_title = tk.Label(right, text=_("Choose a document in the list."),
+                                  font=self.f_title, bg=WHITE, fg=INK, anchor="w",
                                   justify="left")
-        self.titre_doc.pack(fill="x")
-        self.genre_doc = tk.Label(droite, text=_("Ce document n'est jamais modifié par le carnet."),
-                                  font=self.f_petit, bg=BLANC, fg=GRIS, anchor="w")
-        self.genre_doc.pack(fill="x", pady=(2, 8))
-        boutons = tk.Frame(droite, bg=BLANC)
-        boutons.pack(side="bottom", fill="x", pady=(10, 0))
-        self.bouton_fiche_doc = self.bouton(boutons, _("＋  Créer une fiche avec ce document"),
-                                            self.fiche_depuis_document, "bleu")
-        self.bouton_fiche_doc.pack(side="left")
-        self.bouton(boutons, _("Ouvrir dans Word"), self.ouvrir_document).pack(side="left", padx=10)
+        self.doc_title.pack(fill="x")
+        self.doc_kind = tk.Label(right, text=_("This document is never changed by the notebook."),
+                                 font=self.f_small, bg=WHITE, fg=GREY, anchor="w")
+        self.doc_kind.pack(fill="x", pady=(2, 8))
+        buttons = tk.Frame(right, bg=WHITE)
+        buttons.pack(side="bottom", fill="x", pady=(10, 0))
+        self.doc_card_button = self.button(buttons, _("＋  Create a card from this document"),
+                                           self.card_from_document, "blue")
+        self.doc_card_button.pack(side="left")
+        self.button(buttons, _("Open in Word"), self.open_document).pack(side="left", padx=10)
 
         # "What the book understood": the document reformatted, field by field
-        self.cadre_compris = tk.Frame(droite, bg=JAUNE_FOND, padx=14, pady=10,
-                                      highlightthickness=2, highlightbackground=JAUNE_BORD)
-        self.cadre_compris.pack(fill="x", pady=(0, 10))
-        tk.Label(droite, text=_("Texte du document :"), font=self.f_petit, bg=BLANC, fg=GRIS,
+        self.understood_frame = tk.Frame(right, bg=YELLOW_BG, padx=14, pady=10,
+                                         highlightthickness=2, highlightbackground=YELLOW_BORDER)
+        self.understood_frame.pack(fill="x", pady=(0, 10))
+        tk.Label(right, text=_("Document text:"), font=self.f_small, bg=WHITE, fg=GREY,
                  anchor="w").pack(fill="x")
 
-        cadre_texte = tk.Frame(droite, bg=BLANC)
-        cadre_texte.pack(fill="both", expand=True)
-        self.texte_doc = tk.Text(cadre_texte, font=self.f_base, wrap="word", bg=FOND_TEXTE,
-                                 fg=ENCRE, relief="solid", bd=1, padx=12, pady=10,
-                                 highlightthickness=0, state="disabled")
-        barre_t = ttk.Scrollbar(cadre_texte, orient="vertical", command=self.texte_doc.yview)
-        self.texte_doc.configure(yscrollcommand=barre_t.set)
-        self.texte_doc.pack(side="left", fill="both", expand=True)
-        barre_t.pack(side="right", fill="y")
-        self.texte_doc.tag_configure("trouve", background="#FFE08A", foreground=TEXTE_SUR_PASTEL)
+        text_frame = tk.Frame(right, bg=WHITE)
+        text_frame.pack(fill="both", expand=True)
+        self.doc_text = tk.Text(text_frame, font=self.f_base, wrap="word", bg=TEXT_BG,
+                                fg=INK, relief="solid", bd=1, padx=12, pady=10,
+                                highlightthickness=0, state="disabled")
+        txt_bar = ttk.Scrollbar(text_frame, orient="vertical", command=self.doc_text.yview)
+        self.doc_text.configure(yscrollcommand=txt_bar.set)
+        self.doc_text.pack(side="left", fill="both", expand=True)
+        txt_bar.pack(side="right", fill="y")
+        self.doc_text.tag_configure("match", background="#FFE08A", foreground=TEXT_ON_PASTEL)
 
     # ------------------------------------------------------------ navigation
-    def afficher_page(self, page):
+    def show_page(self, page):
         self.page = page
-        self.page_fiches.pack_forget()
-        self.page_documents.pack_forget()
-        self.page_reglages.pack_forget()
+        self.cards_page.pack_forget()
+        self.documents_page.pack_forget()
+        self.settings_page.pack_forget()
         # The letter bar is not used in the settings
-        if page == "reglages":
-            self.barre_lettres.pack_forget()
-            self.sep_lettres.pack_forget()
-        elif not self.barre_lettres.winfo_ismapped():
-            self.barre_lettres.pack(fill="x", before=self.centre)
-            self.sep_lettres.pack(fill="x", before=self.centre)
+        if page == "settings":
+            self.letter_bar.pack_forget()
+            self.letter_separator.pack_forget()
+        elif not self.letter_bar.winfo_ismapped():
+            self.letter_bar.pack(fill="x", before=self.center)
+            self.letter_separator.pack(fill="x", before=self.center)
         if page == "documents":
-            self.page_documents.pack(fill="both", expand=True)
-        elif page == "reglages":
-            self.page_reglages.pack(fill="both", expand=True)
+            self.documents_page.pack(fill="both", expand=True)
+        elif page == "settings":
+            self.settings_page.pack(fill="both", expand=True)
         else:
-            self.page_fiches.pack(fill="both", expand=True)
+            self.cards_page.pack(fill="both", expand=True)
             contact = page == "contact"
-            self.titre_recherche.configure(text=_("Chercher un contact") if contact
-                                           else _("Chercher une fiche"))
-            self.bouton_nouvelle.configure(text=_("＋  Nouveau contact") if contact
-                                           else _("＋  Nouvelle fiche"))
-            self.aucune_fiche.configure(
-                text=(_("Aucun contact n'est choisi.\n\n") if contact else
-                      _("Aucune fiche n'est choisie.\n\n"))
-                + _("• Cliquez sur un nom dans la liste à gauche,\n")
-                + (_("• ou sur « Nouveau contact » pour en créer un.") if contact else
-                   _("• ou sur « Nouvelle fiche » pour en créer une."))
-                + _("\n\nAstuce : glissez des fichiers .docx ou .txt (ou tout un dossier)\n"
-                  "depuis l'Explorateur sur cette fenêtre pour les ranger d'un coup."))
-            if self.var_recherche.get():
-                self.var_recherche.set("")
-            if self.var_filtre_cat.get() != toutes_categories():
-                self.var_filtre_cat.set(toutes_categories())
-        for nom, b in self.onglets.items():
-            actif = nom == page
-            b.configure(bg=BLEU if actif else BLANC, fg=SUR_ACCENT if actif else ENCRE,
-                        activebackground=BLEU_FONCE if actif else BLEU_CLAIR,
-                        activeforeground=SUR_ACCENT if actif else ENCRE)
-        self.lettre = "Tout"
-        self.rafraichir()
+            self.search_title.configure(text=_("Search for a contact") if contact
+                                        else _("Search for a card"))
+            self.new_button.configure(text=_("＋  New contact") if contact
+                                      else _("＋  New card"))
+            self.no_card.configure(
+                text=(_("No contact is selected.\n\n") if contact else
+                      _("No card is selected.\n\n"))
+                + _("• Click a name in the list on the left,\n")
+                + (_("• or on “New contact” to create one.") if contact else
+                   _("• or on “New card” to create one."))
+                + _("\n\nTip: drag .docx or .txt files (or a whole folder)\nfrom your file "
+                    "manager onto this window to file them all at once."))
+            if self.search_var.get():
+                self.search_var.set("")
+            if self.category_filter_var.get() != all_categories():
+                self.category_filter_var.set(all_categories())
+        for name, b in self.tabs.items():
+            active = name == page
+            b.configure(bg=BLUE if active else WHITE, fg=ON_ACCENT if active else INK,
+                        activebackground=BLUE_DARK if active else BLUE_LIGHT,
+                        activeforeground=ON_ACCENT if active else INK)
+        self.letter = "All"
+        self.refresh()
 
-    def rafraichir(self):
+    def refresh(self):
         if self.page == "documents":
-            self.remplir_liste_docs()
-        elif self.page == "reglages":
-            self.remplir_categories()
-            self._afficher_dossier_txt()
+            self.fill_docs_list()
+        elif self.page == "settings":
+            self.fill_categories()
+            self._show_txt_folder()
         else:
-            self.remplir_liste_fiches()
+            self.fill_cards_list()
 
-    def choisir_lettre(self, lettre):
+    def choose_letter(self, letter):
         # A letter clears the search, so the two don't mix.
-        var = self.var_recherche_docs if self.page == "documents" else self.var_recherche
+        var = self.docs_search_var if self.page == "documents" else self.search_var
         if var.get():
             var.set("")
-        self.lettre = lettre
-        self.rafraichir()
+        self.letter = letter
+        self.refresh()
 
-    def _colorer_lettres(self, lettres_presentes):
-        for lettre, b in self.boutons_lettres.items():
-            actif = lettre == self.lettre
-            present = lettre == "Tout" or lettre in lettres_presentes
-            if actif:
-                b.configure(bg=BLEU, fg=SUR_ACCENT, activebackground=BLEU_FONCE,
-                            activeforeground=SUR_ACCENT, state="normal", cursor="hand2")
+    def _color_letters(self, letters_present):
+        for letter, b in self.letter_buttons.items():
+            active = letter == self.letter
+            present = letter == "All" or letter in letters_present
+            if active:
+                b.configure(bg=BLUE, fg=ON_ACCENT, activebackground=BLUE_DARK,
+                            activeforeground=ON_ACCENT, state="normal", cursor="hand2")
             elif present:
-                b.configure(bg=BLANC, fg=ENCRE, activebackground=BLEU_CLAIR,
-                            activeforeground=ENCRE, state="normal", cursor="hand2")
+                b.configure(bg=WHITE, fg=INK, activebackground=BLUE_LIGHT,
+                            activeforeground=INK, state="normal", cursor="hand2")
             else:
-                b.configure(bg=BARRE, fg=LETTRE_ETEINTE, state="disabled",
-                            disabledforeground=LETTRE_ETEINTE, cursor="arrow")
+                b.configure(bg=BAR, fg=LETTER_OFF, state="disabled",
+                            disabledforeground=LETTER_OFF, cursor="arrow")
 
     # --------------------------------------------------------------- text size
-    def appliquer_taille(self, niveau, enregistrer=True):
-        niveau = max(0, min(len(TAILLES) - 1, int(niveau)))
-        t = TAILLES[niveau]
+    def apply_size(self, level, save=True):
+        level = max(0, min(len(SIZES) - 1, int(level)))
+        t = SIZES[level]
         self.f_base.configure(size=t)
-        self.f_gras.configure(size=t)
-        self.f_petit.configure(size=max(t - 2, 11))
-        self.f_titre.configure(size=t + 6)
-        self.f_mdp.configure(size=t + 6)
-        self.f_lettre.configure(size=t - 1)
-        for i, b in enumerate(self.boutons_taille):
-            actif = i == niveau
-            b.configure(bg=BLEU if actif else BLANC, fg=SUR_ACCENT if actif else ENCRE,
-                        activebackground=BLEU_FONCE if actif else BLEU_CLAIR,
-                        activeforeground=SUR_ACCENT if actif else ENCRE)
-        self.racine.after(20, self._placer_lettres)
-        self.racine.after(20, lambda: self._placer_en_lignes(
-            self.zone_onglets, list(self.onglets.values()), ecart=6))
-        if enregistrer and self.carnet.reglages.get("taille_texte") != niveau:
-            self.carnet.reglages["taille_texte"] = niveau
-            self.programmer_enregistrement()
+        self.f_bold.configure(size=t)
+        self.f_small.configure(size=max(t - 2, 11))
+        self.f_title.configure(size=t + 6)
+        self.f_password.configure(size=t + 6)
+        self.f_letter.configure(size=t - 1)
+        for i, b in enumerate(self.size_buttons):
+            active = i == level
+            b.configure(bg=BLUE if active else WHITE, fg=ON_ACCENT if active else INK,
+                        activebackground=BLUE_DARK if active else BLUE_LIGHT,
+                        activeforeground=ON_ACCENT if active else INK)
+        self.root.after(20, self._place_letters)
+        self.root.after(20, lambda: self._wrap_in_rows(
+            self.tabs_area, list(self.tabs.values()), gap=6))
+        if save and self.book.settings.get("text_size") != level:
+            self.book.settings["text_size"] = level
+            self.schedule_save()
 
     # -------------------------------------------------------------- card list
-    def _recherche_fiches_changee(self):
-        if self.var_recherche.get():
-            self.lettre = "Tout"
-        if self.page in ("compte", "contact"):
-            self.remplir_liste_fiches()
+    def _cards_search_changed(self):
+        if self.search_var.get():
+            self.letter = "All"
+        if self.page in ("account", "contact"):
+            self.fill_cards_list()
 
-    def remplir_liste_fiches(self):
-        genre = self.page
-        recherche = normaliser(self.var_recherche.get().strip())
-        toutes = sorted((f for f in self.carnet.fiches if f.get("type", "compte") == genre),
-                        key=lambda f: cle_tri(f["nom"]))
-        trouvees = [f for f in toutes if fiche_correspond(f, recherche)]
-        noms_cat = self.carnet.noms_categories()
-        self.choix_filtre_cat.configure(values=[toutes_categories()] + noms_cat + [sans_categorie()])
-        filtre = self.var_filtre_cat.get()
-        if filtre not in [toutes_categories(), sans_categorie()] + noms_cat:
-            filtre = toutes_categories()
-            self.var_filtre_cat.set(filtre)
-        if filtre == sans_categorie():
-            trouvees = [f for f in trouvees if not f.get("categorie")]
-        elif filtre != toutes_categories():
-            trouvees = [f for f in trouvees if f.get("categorie") == filtre]
-        self._colorer_lettres({premiere_lettre(f["nom"]) for f in trouvees})
-        if self.lettre != "Tout":
-            trouvees = [f for f in trouvees if premiere_lettre(f["nom"]) == self.lettre]
+    def fill_cards_list(self):
+        kind = self.page
+        search = normalize(self.search_var.get().strip())
+        all_cards = sorted((f for f in self.book.cards if f.get("type", "account") == kind),
+                           key=lambda f: sort_key(f["name"]))
+        found_cards = [f for f in all_cards if card_matches(f, search)]
+        cat_names = self.book.category_names()
+        self.category_filter_choice.configure(values=[all_categories()] + cat_names + [no_category()])
+        filter_fn = self.category_filter_var.get()
+        if filter_fn not in [all_categories(), no_category()] + cat_names:
+            filter_fn = all_categories()
+            self.category_filter_var.set(filter_fn)
+        if filter_fn == no_category():
+            found_cards = [f for f in found_cards if not f.get("category")]
+        elif filter_fn != all_categories():
+            found_cards = [f for f in found_cards if f.get("category") == filter_fn]
+        self._color_letters({first_letter(f["name"]) for f in found_cards})
+        if self.letter != "All":
+            found_cards = [f for f in found_cards if first_letter(f["name"]) == self.letter]
 
-        self.liste_fiches.delete(0, "end")
-        self.ids_affiches = []
-        for i, fiche in enumerate(trouvees):
-            self.liste_fiches.insert("end", "  " + (fiche["nom"] or _("Sans nom")))
-            self._colorer_ligne(i, fiche)
-            self.ids_affiches.append(fiche["id"])
-        if self.id_courant in self.ids_affiches:
-            i = self.ids_affiches.index(self.id_courant)
-            self.liste_fiches.selection_set(i)
-            self.liste_fiches.see(i)
+        self.cards_list.delete(0, "end")
+        self.shown_ids = []
+        for i, card in enumerate(found_cards):
+            self.cards_list.insert("end", "  " + (card["name"] or _("Untitled")))
+            self._color_row(i, card)
+            self.shown_ids.append(card["id"])
+        if self.current_id in self.shown_ids:
+            i = self.shown_ids.index(self.current_id)
+            self.cards_list.selection_set(i)
+            self.cards_list.see(i)
 
-        n = len(trouvees)
-        if genre == "contact":
-            texte = n_(n, "{n} contact", "{n} contacts")
-            if recherche:
-                texte = n_(n, "{n} contact trouvé", "{n} contacts trouvés")
+        n = len(found_cards)
+        if kind == "contact":
+            text_value = n_(n, "{n} contact", "{n} contacts")
+            if search:
+                text_value = n_(n, "{n} contact found", "{n} contacts found")
         else:
-            texte = n_(n, "{n} fiche", "{n} fiches")
-            if recherche:
-                texte = n_(n, "{n} fiche trouvée", "{n} fiches trouvées")
-        if not recherche:
-            texte += _(", de A à Z") if self.lettre == "Tout" else _(" à la lettre {lettre}", lettre=self.lettre)
-        if filtre != toutes_categories():
-            texte += f" — {filtre}"
-        self.etiquette_compte.configure(text=texte)
-        self.montrer_fiche(self.carnet.trouver(self.id_courant))
+            text_value = n_(n, "{n} card", "{n} cards")
+            if search:
+                text_value = n_(n, "{n} card found", "{n} cards found")
+        if not search:
+            text_value += _(", from A to Z") if self.letter == "All" else _(" starting with {letter}", letter=self.letter)
+        if filter_fn != all_categories():
+            text_value += f" — {filter_fn}"
+        self.count_label.configure(text=text_value)
+        self.show_card(self.book.find(self.current_id))
 
-    def _fiche_choisie(self):
-        choix = self.liste_fiches.curselection()
-        if not choix:
+    def _card_selected(self):
+        selection = self.cards_list.curselection()
+        if not selection:
             return
-        self.id_courant = self.ids_affiches[choix[0]]
-        self.montrer_fiche(self.carnet.trouver(self.id_courant))
+        self.current_id = self.shown_ids[selection[0]]
+        self.show_card(self.book.find(self.current_id))
 
-    def montrer_fiche(self, fiche):
-        if fiche is None or fiche.get("type", "compte") != self.page:
-            self.zone_formulaire.pack_forget()
-            self.aucune_fiche.pack(anchor="nw")
+    def show_card(self, card):
+        if card is None or card.get("type", "account") != self.page:
+            self.form_area.pack_forget()
+            self.no_card.pack(anchor="nw")
             return
-        self.aucune_fiche.pack_forget()
-        self.zone_formulaire.pack(fill="both", expand=True)
-        self._construire_formulaire(fiche)
+        self.no_card.pack_forget()
+        self.form_area.pack(fill="both", expand=True)
+        self._build_form(card)
 
-    def creer_fiche(self):
-        genre = self.page if self.page in ("compte", "contact") else "compte"
-        fiche = self.carnet.nouvelle_fiche(type=genre)
-        self.id_courant = fiche["id"]
-        if self.var_recherche.get():
-            self.var_recherche.set("")
-        self.lettre = "Tout"
-        self.remplir_liste_fiches()
-        self.programmer_enregistrement()
+    def create_card(self):
+        kind = self.page if self.page in ("account", "contact") else "account"
+        card = self.book.new_card(type=kind)
+        self.current_id = card["id"]
+        if self.search_var.get():
+            self.search_var.set("")
+        self.letter = "All"
+        self.fill_cards_list()
+        self.schedule_save()
         # Offer to type the name right away.
-        if self.champ_nom is not None:
-            self.champ_nom.focus_set()
-            self.champ_nom.select_range(0, "end")
+        if self.name_entry is not None:
+            self.name_entry.focus_set()
+            self.name_entry.select_range(0, "end")
 
-    def supprimer_fiche(self):
-        fiche = self.carnet.trouver(self.id_courant)
-        if fiche is None:
+    def delete_card(self):
+        card = self.book.find(self.current_id)
+        if card is None:
             return
-        if fiche.get("type") == "contact":
-            question = _("Voulez-vous vraiment supprimer le contact « {nom} » ?", nom=fiche["nom"])
+        if card.get("type") == "contact":
+            question = _("Do you really want to delete the contact “{name}”?", name=card["name"])
         else:
-            question = _("Voulez-vous vraiment supprimer la fiche « {nom} » ?", nom=fiche["nom"])
+            question = _("Do you really want to delete the card “{name}”?", name=card["name"])
         if not messagebox.askyesno(
-                _("Supprimer ?"),
-                question + "\n\n" + _("Une copie reste dans les sauvegardes du jour."),
+                _("Delete?"),
+                question + "\n\n" + _("A copy stays in today's backups."),
                 icon="warning", default="no"):
             return
-        self.carnet.supprimer(fiche["id"])
-        self.id_courant = None
-        self.remplir_liste_fiches()
-        self.programmer_enregistrement()
+        self.book.delete(card["id"])
+        self.current_id = None
+        self.fill_cards_list()
+        self.schedule_save()
 
     # ------------------------------------------------------------ small helpers
-    def copier(self, texte, bouton=None):
-        if not texte:
+    def copy(self, text_value, button=None):
+        if not text_value:
             return
-        self.racine.clipboard_clear()
-        self.racine.clipboard_append(texte)
-        self.racine.update()
-        if bouton is not None:
-            ancien = bouton.cget("text")
-            if not ancien.startswith("✔"):
-                bouton.configure(text=_("✔ Copié"))
-                self.racine.after(1500, lambda: bouton.configure(text=ancien))
+        self.root.clipboard_clear()
+        self.root.clipboard_append(text_value)
+        self.root.update()
+        if button is not None:
+            old = button.cget("text")
+            if not old.startswith("✔"):
+                button.configure(text=_("✔ Copied"))
+                self.root.after(1500, lambda: button.configure(text=old))
 
-    def ouvrir_site(self):
-        adresse = self.vars_fiche["site"].get().strip() if "site" in self.vars_fiche else ""
-        if not adresse:
-            messagebox.showinfo(_("Site internet"), _("Aucune adresse de site n'est notée sur cette fiche."))
+    def open_site(self):
+        address = self.card_vars["site"].get().strip() if "site" in self.card_vars else ""
+        if not address:
+            messagebox.showinfo(_("Website"), _("No website address is written on this card."))
             return
-        if not re.match(r"^https?://", adresse, re.IGNORECASE):
-            adresse = "https://" + adresse
-        webbrowser.open(adresse)
+        if not re.match(r"^https?://", address, re.IGNORECASE):
+            address = "https://" + address
+        webbrowser.open(address)
 
     # ---------------------------------------------------------------- generator
-    def ouvrir_generateur(self):
-        fiche = self.carnet.trouver(self.id_courant)
-        if fiche is None:
+    def open_generator(self):
+        card = self.book.find(self.current_id)
+        if card is None:
             return
-        if fiche.get("mdp") and not messagebox.askyesno(
-                _("Changer le mot de passe ?"),
-                _("Voulez-vous vraiment changer le mot de passe de « {nom} » ?\n\n"
-                  "Attention : cela change seulement le carnet. Il faudra aussi le changer "
-                  "sur le site lui-même, sinon vous ne pourrez plus vous connecter.\n\n"
-                  "(L'ancien mot de passe sera gardé dans les notes.)", nom=fiche.get("nom", "")),
+        if card.get("password") and not messagebox.askyesno(
+                _("Change the password?"),
+                _("Do you really want to change the password for “{name}”?\n\nCareful: this only "
+                  "changes the notebook. You must also change it on the website itself, "
+                  "otherwise you will no longer be able to log in.\n\n(The old password will be "
+                  "kept in the notes.)", name=card.get("name", "")),
                 icon="warning", default="no"):
             return
-        FenetreGenerateur(self)
+        GeneratorWindow(self)
 
-    def remplacer_mot_de_passe(self, nouveau):
-        fiche = self.carnet.trouver(self.id_courant)
-        if fiche is None:
+    def replace_password(self, new):
+        card = self.book.find(self.current_id)
+        if card is None:
             return
-        ancien = fiche.get("mdp", "")
-        if ancien and ancien != nouveau:
-            date = datetime.now().strftime(_("%d/%m/%Y"))
-            note = _("Ancien mot de passe (remplacé le {date}) : {ancien}", date=date, ancien=ancien)
-            notes = fiche.get("notes", "").rstrip()
-            fiche["notes"] = (notes + "\n" + note).strip()
-        fiche["mdp"] = nouveau
-        fiche["modifie_le"] = datetime.now().isoformat(timespec="seconds")
-        fiche["modifiee_a_la_main"] = True   # synchronization will not overwrite it
-        self.montrer_fiche(fiche)
-        self.programmer_enregistrement()
+        old = card.get("password", "")
+        if old and old != new:
+            date = datetime.now().strftime(_("%m/%d/%Y"))
+            note = _("Old password (replaced on {date}): {old}", date=date, old=old)
+            notes = card.get("notes", "").rstrip()
+            card["notes"] = (notes + "\n" + note).strip()
+        card["password"] = new
+        card["modified_at"] = datetime.now().isoformat(timespec="seconds")
+        card["edited_by_hand"] = True   # synchronization will not overwrite it
+        self.show_card(card)
+        self.schedule_save()
 
     # --------------------------------------------------------------------- save
-    def programmer_enregistrement(self):
-        self.etiquette_etat.configure(text=_("✎ Modification en cours…"), fg=GRIS)
-        if self._minuterie is not None:
-            self.racine.after_cancel(self._minuterie)
-        self._minuterie = self.racine.after(800, self.enregistrer)
+    def schedule_save(self):
+        self.status_label.configure(text=_("✎ Editing…"), fg=GREY)
+        if self._timer is not None:
+            self.root.after_cancel(self._timer)
+        self._timer = self.root.after(800, self.save)
 
-    def enregistrer(self):
-        self._minuterie = None
-        copie_ok = self.carnet.synchroniser_txt()  # the .txt files first (updates their list)
+    def save(self):
+        self._timer = None
+        copy_ok = self.book.sync_txt()  # the .txt files first (updates their list)
         try:
-            self.carnet.enregistrer()
+            self.book.save()
         except Exception as exc:
-            self.etiquette_etat.configure(text=_("⚠ Impossible d'enregistrer !"), fg=ROUGE)
+            self.status_label.configure(text=_("⚠ Could not save!"), fg=RED)
             messagebox.showerror(
-                _("Problème d'enregistrement"),
-                _("Le carnet n'a pas pu être enregistré.\n\n") + str(exc))
+                _("Saving problem"),
+                _("The notebook could not be saved.\n\n") + str(exc))
             return False
-        heure = datetime.now().strftime("%H:%M")
-        if copie_ok:
-            self.etiquette_etat.configure(text=_("✔ Tout est enregistré (à {heure})", heure=heure), fg=VERT_TEXTE)
-            self._alerte_txt_montree = False
+        time_str = datetime.now().strftime("%H:%M")
+        if copy_ok:
+            self.status_label.configure(text=_("✔ Everything is saved ({time_str})", time_str=time_str), fg=GREEN_TEXT)
+            self._txt_alert_shown = False
         else:
             # The book is saved; only the .txt copy failed (USB stick removed…).
-            self.etiquette_etat.configure(
-                text=_("✔ Enregistré (à {heure}) — ⚠ copie .txt impossible", heure=heure), fg=ROUGE)
-            if not self._alerte_txt_montree:
-                self._alerte_txt_montree = True
+            self.status_label.configure(
+                text=_("✔ Saved ({time_str}) — ⚠ .txt copy failed", time_str=time_str), fg=RED)
+            if not self._txt_alert_shown:
+                self._txt_alert_shown = True
                 messagebox.showwarning(
-                    NOM_APPLI, _("Le carnet est bien enregistré, mais la copie des fiches en "
-                               ".txt n'a pas pu être faite.\n\nLe dossier est peut-être "
-                               "débranché (clé USB, disque réseau).\n\n") + self.carnet.message_txt)
+                    APP_NAME, _("The notebook is saved, but the .txt copy of the cards could "
+                                "not be made.\n\nThe folder may be disconnected (USB stick, "
+                                "network drive).\n\n") + self.book.txt_message)
         return True
 
-    def enregistrer_maintenant(self):
-        if self._minuterie is not None:
-            self.racine.after_cancel(self._minuterie)
-            self._minuterie = None
-        if self.enregistrer():
+    def save_now(self):
+        if self._timer is not None:
+            self.root.after_cancel(self._timer)
+            self._timer = None
+        if self.save():
             try:
-                self.carnet.sauvegarde_du_jour()
+                self.book.daily_backup()
             except OSError:
                 pass
 
-    def quitter(self):
-        if self._minuterie is not None:
-            self.racine.after_cancel(self._minuterie)
-        if not self.enregistrer():
-            if not messagebox.askyesno(_("Fermer quand même ?"),
-                                       _("Le carnet n'a pas pu être enregistré.\n"
-                                       "Fermer quand même ?"), default="no"):
+    def quit_app(self):
+        if self._timer is not None:
+            self.root.after_cancel(self._timer)
+        if not self.save():
+            if not messagebox.askyesno(_("Close anyway?"),
+                                       _("The notebook could not be saved.\nClose anyway?"), default="no"):
                 return
-        self.racine.destroy()
+        self.root.destroy()
 
     # ---------------------------------------------------------------- documents
-    def _apres_ouverture(self):
-        if self.carnet.message_recuperation:
-            messagebox.showwarning(NOM_APPLI, self.carnet.message_recuperation)
-        if FICHIER_CARNET.exists():
-            self.etiquette_etat.configure(text=_("✔ Tout est enregistré"), fg=VERT_TEXTE)
-        dossier = self.carnet.reglages.get("dossier_documents", "")
-        self._afficher_dossier()
-        if self.carnet.fiches:
-            self.enregistrer()  # create any missing .txt files
-        if dossier and os.path.isdir(dossier):
-            self.lancer_lecture()
+    def _after_opening(self):
+        if self.book.recovery_message:
+            messagebox.showwarning(APP_NAME, self.book.recovery_message)
+        if BOOK_FILE.exists():
+            self.status_label.configure(text=_("✔ Everything is saved"), fg=GREEN_TEXT)
+        folder = self.book.settings.get("documents_folder", "")
+        self._show_folder()
+        if self.book.cards:
+            self.save()  # create any missing .txt files
+        if folder and os.path.isdir(folder):
+            self.start_reading()
 
-    def _afficher_dossier_txt(self):
-        dossier = self.carnet.reglages.get("dossier_txt", "")
-        self.etiquette_txt.configure(
-            text=(_("Copie de chaque fiche en .txt, mise à jour toute seule, dans :\n") + dossier)
-            if dossier else _("Copie des fiches en .txt : désactivée."))
+    def _show_txt_folder(self):
+        folder = self.book.settings.get("txt_folder", "")
+        self.txt_label.configure(
+            text=(_("Copy of each card as .txt, updated automatically, in:\n") + folder)
+            if folder else _("Copy of cards as .txt: turned off."))
 
-    def choisir_dossier_txt(self):
-        dossier = filedialog.askdirectory(
-            title=_("Dans quel dossier ranger la copie .txt des fiches ?"),
-            initialdir=self.carnet.reglages.get("dossier_txt") or str(DOSSIER_DONNEES))
-        if not dossier:
+    def choose_txt_folder(self):
+        folder = filedialog.askdirectory(
+            title=_("Which folder should hold the .txt copy of the cards?"),
+            initialdir=self.book.settings.get("txt_folder") or str(DATA_FOLDER))
+        if not folder:
             return
-        dossier = os.path.normpath(dossier)
-        docs = self.carnet.reglages.get("dossier_documents", "")
-        if docs and os.path.normcase(dossier) == os.path.normcase(os.path.normpath(docs)):
+        folder = os.path.normpath(folder)
+        docs = self.book.settings.get("documents_folder", "")
+        if docs and os.path.normcase(folder) == os.path.normcase(os.path.normpath(docs)):
             messagebox.showwarning(
-                NOM_APPLI, _("Choisissez un autre dossier que celui des documents d'origine\n"
-                           "(par exemple un sous-dossier « Fiches en texte »)."))
+                APP_NAME, _("Choose a folder other than the one with the original "
+                            "documents\n(for example a “Cards as text” subfolder)."))
             return
-        self.carnet.changer_dossier_txt(dossier)
-        self._afficher_dossier_txt()
-        self.enregistrer()
-        messagebox.showinfo(NOM_APPLI, _("La copie .txt des fiches est maintenant dans :\n") + dossier
-                            + _("\n\nL'ancien dossier n'a pas été modifié."))
+        self.book.change_txt_folder(folder)
+        self._show_txt_folder()
+        self.save()
+        messagebox.showinfo(APP_NAME, _("The .txt copy of the cards is now in:\n") + folder
+                            + _("\n\nThe old folder has not been changed."))
 
-    def ouvrir_fichier_fiche(self, quoi):
+    def open_card_file(self, what):
         """Open the card's .txt copy, its source document, or the folder (file selected)."""
-        fiche = self.carnet.trouver(self.id_courant)
-        if fiche is None:
+        card = self.book.find(self.current_id)
+        if card is None:
             return
-        if quoi == "source":
-            chemin = fiche.get("source", "")
+        if what == "source":
+            path = card.get("source", "")
         else:
-            self.enregistrer()  # the .txt copy must be up to date before opening it
-            rel = fiche.get("fichier_txt", "")
-            chemin = str(Path(self.carnet.reglages.get("dossier_txt", "")) / rel) if rel else ""
-        if not chemin or not os.path.exists(chemin):
-            messagebox.showinfo(NOM_APPLI, _("Ce fichier n'existe pas (ou plus) sur l'ordinateur."))
+            self.save()  # the .txt copy must be up to date before opening it
+            rel = card.get("txt_file", "")
+            path = str(Path(self.book.settings.get("txt_folder", "")) / rel) if rel else ""
+        if not path or not os.path.exists(path):
+            messagebox.showinfo(APP_NAME, _("This file does not exist (or no longer exists) on the computer."))
             return
         try:
-            if quoi == "dossier":
-                montrer_dans_dossier(chemin)
+            if what == "folder":
+                show_in_folder(path)
             else:
-                ouvrir_avec_systeme(chemin)
+                open_with_system(path)
         except OSError as exc:
-            messagebox.showerror(NOM_APPLI, _("Le fichier n'a pas pu être ouvert.\n\n") + str(exc))
+            messagebox.showerror(APP_NAME, _("The file could not be opened.\n\n") + str(exc))
 
-    def ouvrir_dossier_txt(self):
-        dossier = self.carnet.reglages.get("dossier_txt", "")
-        if not dossier:
+    def open_txt_folder(self):
+        folder = self.book.settings.get("txt_folder", "")
+        if not folder:
             return
-        Path(dossier).mkdir(parents=True, exist_ok=True)
+        Path(folder).mkdir(parents=True, exist_ok=True)
         try:
-            ouvrir_avec_systeme(dossier)
+            open_with_system(folder)
         except OSError as exc:
-            messagebox.showerror(NOM_APPLI, _("Le dossier n'a pas pu être ouvert.\n\n") + str(exc))
+            messagebox.showerror(APP_NAME, _("The folder could not be opened.\n\n") + str(exc))
 
-    def _afficher_dossier(self):
-        self._afficher_dossier_txt()
-        dossier = self.carnet.reglages.get("dossier_documents", "")
-        if dossier:
-            self.etiquette_dossier.configure(text=_("Dossier des documents :\n") + dossier)
+    def _show_folder(self):
+        self._show_txt_folder()
+        folder = self.book.settings.get("documents_folder", "")
+        if folder:
+            self.folder_label.configure(text=_("Documents folder:\n") + folder)
         else:
-            self.etiquette_dossier.configure(
-                text=_("Aucun dossier choisi. Cliquez sur « Choisir le dossier… »."))
+            self.folder_label.configure(
+                text=_("No folder chosen. Click “Choose the folder…”."))
 
-    def choisir_dossier(self):
-        dossier = filedialog.askdirectory(
-            title=_("Où sont rangés vos documents ?"),
-            initialdir=self.carnet.reglages.get("dossier_documents") or str(Path.home()))
-        if not dossier:
+    def choose_folder(self):
+        folder = filedialog.askdirectory(
+            title=_("Where are your documents kept?"),
+            initialdir=self.book.settings.get("documents_folder") or str(Path.home()))
+        if not folder:
             return
-        self.carnet.reglages["dossier_documents"] = os.path.normpath(dossier)
-        self.programmer_enregistrement()
-        self._afficher_dossier()
-        self.lancer_lecture()
+        self.book.settings["documents_folder"] = os.path.normpath(folder)
+        self.schedule_save()
+        self._show_folder()
+        self.start_reading()
 
-    def lancer_lecture(self):
-        dossier = self.carnet.reglages.get("dossier_documents", "")
-        if not dossier or not os.path.isdir(dossier):
-            messagebox.showinfo(NOM_APPLI, _("Choisissez d'abord le dossier où sont rangés vos documents."))
+    def start_reading(self):
+        folder = self.book.settings.get("documents_folder", "")
+        if not folder or not os.path.isdir(folder):
+            messagebox.showinfo(APP_NAME, _("First choose the folder where your documents are kept."))
             return
-        if self.lecture_en_cours:
+        if self.reading_in_progress:
             return
-        self.lecture_en_cours = True
-        self.etiquette_compte_docs.configure(text=_("Lecture des documents…"))
-        ancien = self.index
+        self.reading_in_progress = True
+        self.docs_count_label.configure(text=_("Reading documents…"))
+        old = self.index
 
-        def travail():
+        def work():
             try:
-                resultat = indexer(dossier, ancien,
-                                   lambda i, n: self.file_messages.put(("progres", i, n)),
-                                   exclure=[self.carnet.reglages.get("dossier_txt", "")])
+                result = index_documents(folder, old,
+                                         lambda i, n: self.message_queue.put(("progress", i, n)),
+                                         exclude=[self.book.settings.get("txt_folder", "")])
                 try:
-                    ecrire_json_sur(FICHIER_INDEX, resultat)
+                    write_json_safely(INDEX_FILE, result)
                 except OSError:
                     pass
-                self.file_messages.put(("fini", resultat))
+                self.message_queue.put(("done", result))
             except Exception as exc:
-                self.file_messages.put(("erreur", str(exc)))
+                self.message_queue.put(("error", str(exc)))
 
-        threading.Thread(target=travail, daemon=True).start()
-        self.racine.after(100, self._suivre_lecture)
+        threading.Thread(target=work, daemon=True).start()
+        self.root.after(100, self._follow_reading)
 
-    def _suivre_lecture(self):
+    def _follow_reading(self):
         try:
             while True:
-                message = self.file_messages.get_nowait()
-                if message[0] == "progres":
+                message = self.message_queue.get_nowait()
+                if message[0] == "progress":
                     _type, i, n = message
-                    self.etiquette_compte_docs.configure(
-                        text=_("Lecture des documents : {i} sur {n}…", i=i, n=n))
-                elif message[0] == "fini":
+                    self.docs_count_label.configure(
+                        text=_("Reading documents: {i} of {n}…", i=i, n=n))
+                elif message[0] == "done":
                     self.index = message[1]
-                    self.lecture_en_cours = False
-                    demande = self._synchro_demandee
-                    self._synchro_demandee = False
-                    if demande or self.carnet.reglages.get("synchro_auto", True):
-                        self._appliquer_synchro(afficher_resume=demande)
+                    self.reading_in_progress = False
+                    request = self._sync_requested
+                    self._sync_requested = False
+                    if request or self.book.settings.get("auto_sync", True):
+                        self._apply_sync(show_summary=request)
                     if self.page == "documents":
-                        self.remplir_liste_docs()
+                        self.fill_docs_list()
                     else:
-                        self._compte_docs()
+                        self._count_docs()
                     return
-                elif message[0] == "erreur":
-                    self.lecture_en_cours = False
-                    self.etiquette_compte_docs.configure(text=_("La lecture a échoué."))
-                    messagebox.showerror(NOM_APPLI, _("Les documents n'ont pas pu être lus.\n\n") + message[1])
+                elif message[0] == "error":
+                    self.reading_in_progress = False
+                    self.docs_count_label.configure(text=_("Reading failed."))
+                    messagebox.showerror(APP_NAME, _("The documents could not be read.\n\n") + message[1])
                     return
         except queue.Empty:
             pass
-        self.racine.after(100, self._suivre_lecture)
+        self.root.after(100, self._follow_reading)
 
     # ------------------------------------------------------- synchronization
-    def _appliquer_synchro(self, afficher_resume=False):
+    def _apply_sync(self, show_summary=False):
         documents = self._documents()
         if not documents:
             return
-        resume = self.carnet.synchroniser_documents(documents, self._garder_categories)
-        total = resume["crees"] + resume["mises_a_jour"] + resume["a_verifier"]
+        summary = self.book.sync_documents(documents, self._keep_categories)
+        total = summary["created"] + summary["updated"] + summary["to_check"]
         if total:
-            self.enregistrer()
-            if self.page in ("compte", "contact"):
-                self.remplir_liste_fiches()
-        morceaux = []
-        if resume["crees"]:
-            morceaux.append(n_(resume["crees"], "{n} fiche créée", "{n} fiches créées"))
-        if resume["mises_a_jour"]:
-            morceaux.append(n_(resume["mises_a_jour"], "{n} mise à jour", "{n} mises à jour"))
-        if resume["a_verifier"]:
-            morceaux.append(n_(resume["a_verifier"], "{n} à vérifier (⚠ dans les notes)",
-                               "{n} à vérifier (⚠ dans les notes)"))
-        if morceaux:
-            heure = datetime.now().strftime("%H:%M")
-            self.etiquette_synchro.configure(
-                text=_("↻ Documents synchronisés à {heure} : ", heure=heure) + ", ".join(morceaux))
-        if afficher_resume:
+            self.save()
+            if self.page in ("account", "contact"):
+                self.fill_cards_list()
+        parts = []
+        if summary["created"]:
+            parts.append(n_(summary["created"], "{n} card created", "{n} cards created"))
+        if summary["updated"]:
+            parts.append(n_(summary["updated"], "{n} card updated", "{n} cards updated"))
+        if summary["to_check"]:
+            parts.append(n_(summary["to_check"], "{n} to check (⚠ in the notes)",
+                            "{n} to check (⚠ in the notes)"))
+        if parts:
+            time_str = datetime.now().strftime("%H:%M")
+            self.sync_label.configure(
+                text=_("↻ Documents synced at {time_str}: ", time_str=time_str) + ", ".join(parts))
+        if show_summary:
             messagebox.showinfo(
-                _("Synchronisation"),
-                (_("Depuis les documents :\n\n   • ") + "\n   • ".join(morceaux)) if morceaux
-                else _("Tout est déjà à jour : aucune fiche à créer ou à modifier."))
+                _("Sync"),
+                (_("From the documents:\n\n   • ") + "\n   • ".join(parts)) if parts
+                else _("Everything is already up to date: no card to create or change."))
 
-    def synchroniser_maintenant(self):
-        dossier = self.carnet.reglages.get("dossier_documents", "")
-        if not dossier or not os.path.isdir(dossier):
-            messagebox.showinfo(NOM_APPLI, _("Choisissez d'abord le dossier où sont rangés vos documents."))
+    def sync_now(self):
+        folder = self.book.settings.get("documents_folder", "")
+        if not folder or not os.path.isdir(folder):
+            messagebox.showinfo(APP_NAME, _("First choose the folder where your documents are kept."))
             return
-        self._synchro_demandee = True
-        self.lancer_lecture()
+        self._sync_requested = True
+        self.start_reading()
 
-    def _synchro_auto_changee(self):
-        self.carnet.reglages["synchro_auto"] = bool(self.var_synchro.get())
-        self.programmer_enregistrement()
-        if self.var_synchro.get():
-            self.synchroniser_maintenant()
+    def _auto_sync_changed(self):
+        self.book.settings["auto_sync"] = bool(self.sync_var.get())
+        self.schedule_save()
+        if self.sync_var.get():
+            self.sync_now()
 
-    def _synchro_periodique(self):
+    def _periodic_sync(self):
         """Every minute: rescan the folder (only changed files are read again)."""
-        dossier = self.carnet.reglages.get("dossier_documents", "")
-        if (self.carnet.reglages.get("synchro_auto", True) and dossier
-                and os.path.isdir(dossier) and not self.lecture_en_cours):
-            self.lancer_lecture()
-        self.racine.after(60000, self._synchro_periodique)
+        folder = self.book.settings.get("documents_folder", "")
+        if (self.book.settings.get("auto_sync", True) and folder
+                and os.path.isdir(folder) and not self.reading_in_progress):
+            self.start_reading()
+        self.root.after(60000, self._periodic_sync)
 
     def _documents(self):
         return self.index.get("documents", {}) if self.index.get(
-            "dossier") == self.carnet.reglages.get("dossier_documents") else {}
+            "folder") == self.book.settings.get("documents_folder") else {}
 
-    def _compte_docs(self):
+    def _count_docs(self):
         n = len(self._documents())
-        self.etiquette_compte_docs.configure(text=n_(n, "{n} document", "{n} documents"))
+        self.docs_count_label.configure(text=n_(n, "{n} document", "{n} documents"))
 
-    def _recherche_docs_changee(self):
-        if self.var_recherche_docs.get():
-            self.lettre = "Tout"
-        if self._minuterie_recherche is not None:
-            self.racine.after_cancel(self._minuterie_recherche)
-        self._minuterie_recherche = self.racine.after(250, self.remplir_liste_docs)
+    def _docs_search_changed(self):
+        if self.docs_search_var.get():
+            self.letter = "All"
+        if self._search_timer is not None:
+            self.root.after_cancel(self._search_timer)
+        self._search_timer = self.root.after(250, self.fill_docs_list)
 
-    def choisir_filtre(self, genre):
-        self.filtre_genre = genre
-        self.remplir_liste_docs()
+    def choose_filter(self, kind):
+        self.kind_filter = kind
+        self.fill_docs_list()
 
-    def remplir_liste_docs(self):
-        self._minuterie_recherche = None
-        for genre, b in self.boutons_filtre.items():
-            actif = genre == self.filtre_genre
-            b.configure(bg=BLEU if actif else BLANC, fg=SUR_ACCENT if actif else ENCRE,
-                        activebackground=BLEU_FONCE if actif else BLEU_CLAIR,
-                        activeforeground=SUR_ACCENT if actif else ENCRE)
+    def fill_docs_list(self):
+        self._search_timer = None
+        for kind, b in self.filter_buttons.items():
+            active = kind == self.kind_filter
+            b.configure(bg=BLUE if active else WHITE, fg=ON_ACCENT if active else INK,
+                        activebackground=BLUE_DARK if active else BLUE_LIGHT,
+                        activeforeground=ON_ACCENT if active else INK)
         documents = self._documents()
-        recherche = normaliser(self.var_recherche_docs.get().strip())
-        elements = sorted(documents.items(), key=lambda kv: cle_tri(kv[1]["nom"]))
-        deja = self.carnet.sources_connues()
-        tous_les_documents = len(elements)
-        if self.filtre_genre == "a_ranger":
-            elements = [(c, d) for c, d in elements if os.path.normcase(c) not in deja]
-        elif self.filtre_genre != "tous":
-            elements = [(c, d) for c, d in elements if d.get("genre", "autre") == self.filtre_genre]
-        if recherche:
-            elements = [(c, d) for c, d in elements if recherche in self._texte_cherchable(c, d)]
-        self._colorer_lettres({premiere_lettre(d["nom"]) for _c, d in elements})
-        if self.lettre != "Tout":
-            elements = [(c, d) for c, d in elements if premiere_lettre(d["nom"]) == self.lettre]
+        search = normalize(self.docs_search_var.get().strip())
+        entries = sorted(documents.items(), key=lambda kv: sort_key(kv[1]["name"]))
+        already = self.book.known_sources()
+        all_documents = len(entries)
+        if self.kind_filter == "to_file":
+            entries = [(c, d) for c, d in entries if os.path.normcase(c) not in already]
+        elif self.kind_filter != "all":
+            entries = [(c, d) for c, d in entries if d.get("kind", "other") == self.kind_filter]
+        if search:
+            entries = [(c, d) for c, d in entries if search in self._searchable_text(c, d)]
+        self._color_letters({first_letter(d["name"]) for _c, d in entries})
+        if self.letter != "All":
+            entries = [(c, d) for c, d in entries if first_letter(d["name"]) == self.letter]
 
-        self.liste_docs.delete(0, "end")
-        self.chemins_affiches = []
-        for chemin, doc in elements:
-            genre = doc.get("genre", "autre")
-            marque = "✔ " if os.path.normcase(chemin) in deja else "   "
-            self.liste_docs.insert("end", f" {marque}{_(ETIQUETTES_GENRE[genre])} · {doc['nom']}")
-            self.liste_docs.itemconfig("end", foreground=couleur_genre(genre))
-            self.chemins_affiches.append(chemin)
+        self.docs_list.delete(0, "end")
+        self.shown_paths = []
+        for path, doc in entries:
+            kind = doc.get("kind", "other")
+            mark = "✔ " if os.path.normcase(path) in already else "   "
+            self.docs_list.insert("end", f" {mark}{_(KIND_LABELS[kind])} · {doc['name']}")
+            self.docs_list.itemconfig("end", foreground=kind_color(kind))
+            self.shown_paths.append(path)
 
-        n = len(elements)
-        if self.lecture_en_cours:
+        n = len(entries)
+        if self.reading_in_progress:
             return
-        if not self.carnet.reglages.get("dossier_documents"):
-            texte = _("Aucun dossier choisi.")
+        if not self.book.settings.get("documents_folder"):
+            text_value = _("No folder chosen.")
         else:
-            if self.filtre_genre == "a_ranger":
-                texte = (n_(n, "{n} document à ranger (sur {total})", "{n} documents à ranger (sur {total})",
-                            total=tous_les_documents) if n else
-                         _("✔ Tout est rangé ({total} documents).\nCliquez sur « Tout » pour les revoir.",
-                           total=tous_les_documents))
-            elif recherche:
-                texte = n_(n, "{n} document trouvé", "{n} documents trouvés")
+            if self.kind_filter == "to_file":
+                text_value = (n_(n, "{n} document to file (out of {total})", "{n} documents to file (out of {total})",
+                                 total=all_documents) if n else
+                              _("✔ Everything is filed ({total} documents).\nClick “All” to see them again.",
+                                total=all_documents))
+            elif search:
+                text_value = n_(n, "{n} document found", "{n} documents found")
             else:
-                texte = n_(n, "{n} document", "{n} documents")
-            if not recherche and self.lettre != "Tout" and n:
-                texte += _(" à la lettre {lettre}", lettre=self.lettre)
-            texte += "\n" + _("✔ = déjà rangé dans le carnet")
-            anciens = self.index.get("anciens_doc", 0)
-            if anciens:
-                texte += "\n" + n_(anciens, "⚠ {n} ancien fichier .doc non lu\n   (à enregistrer en .docx avec Word)",
-                                   "⚠ {n} anciens fichiers .doc non lus\n   (à enregistrer en .docx avec Word)")
-        self.etiquette_compte_docs.configure(text=texte)
+                text_value = n_(n, "{n} document", "{n} documents")
+            if not search and self.letter != "All" and n:
+                text_value += _(" starting with {letter}", letter=self.letter)
+            text_value += "\n" + _("✔ = already filed in the notebook")
+            old_entries = self.index.get("old_doc_count", 0)
+            if old_entries:
+                text_value += "\n" + n_(old_entries, "⚠ {n} old .doc file not read\n   (save it as .docx with Word)",
+                                        "⚠ {n} old .doc files not read\n   (save them as .docx with Word)")
+        self.docs_count_label.configure(text=text_value)
 
-    def _texte_cherchable(self, chemin, doc):
+    def _searchable_text(self, path, doc):
         """Name + text without accents, cached for fast searching."""
-        cle = (chemin, doc.get("mtime"))
-        if cle not in self._cache_recherche:
-            self._cache_recherche[cle] = normaliser(doc["nom"] + "\n" + doc.get("texte", ""))
-        return self._cache_recherche[cle]
+        key = (path, doc.get("mtime"))
+        if key not in self._search_cache:
+            self._search_cache[key] = normalize(doc["name"] + "\n" + doc.get("text", ""))
+        return self._search_cache[key]
 
-    def _document_courant(self):
-        choix = self.liste_docs.curselection()
-        if not choix:
+    def _current_document(self):
+        selection = self.docs_list.curselection()
+        if not selection:
             return None, None
-        chemin = self.chemins_affiches[choix[0]]
-        return chemin, self._documents().get(chemin)
+        path = self.shown_paths[selection[0]]
+        return path, self._documents().get(path)
 
-    def _document_choisi(self):
-        chemin, doc = self._document_courant()
+    def _document_selected(self):
+        path, doc = self._current_document()
         if doc is None:
             return
-        self.titre_doc.configure(text=doc["nom"])
-        genre = doc.get("genre", "autre")
-        self.genre_doc.configure(
-            text=_("Reconnu comme : {genre}   —   ce document n'est jamais modifié.",
-                   genre=_(NOMS_GENRE[genre])),
-            fg=couleur_genre(genre))
-        self._montrer_compris(chemin, doc)
-        self.texte_doc.configure(state="normal")
-        self.texte_doc.delete("1.0", "end")
-        self.texte_doc.insert("1.0", doc["erreur"] or doc["texte"] or _("(Document vide)"))
-        recherche = self.var_recherche_docs.get().strip()
-        if recherche:
-            debut = "1.0"
+        self.doc_title.configure(text=doc["name"])
+        kind = doc.get("kind", "other")
+        self.doc_kind.configure(
+            text=_("Recognised as: {kind}   —   this document is never changed.",
+                   kind=_(KIND_NAMES[kind])),
+            fg=kind_color(kind))
+        self._show_understood(path, doc)
+        self.doc_text.configure(state="normal")
+        self.doc_text.delete("1.0", "end")
+        self.doc_text.insert("1.0", doc["error"] or doc["text"] or _("(Empty document)"))
+        search = self.docs_search_var.get().strip()
+        if search:
+            start = "1.0"
             while True:
-                pos = self.texte_doc.search(recherche, debut, stopindex="end", nocase=True)
+                pos = self.doc_text.search(search, start, stopindex="end", nocase=True)
                 if not pos:
                     break
-                fin = f"{pos}+{len(recherche)}c"
-                self.texte_doc.tag_add("trouve", pos, fin)
-                debut = fin
-            premier = self.texte_doc.tag_nextrange("trouve", "1.0")
-            if premier:
-                self.texte_doc.see(premier[0])
-        self.texte_doc.configure(state="disabled")
+                end = f"{pos}+{len(search)}c"
+                self.doc_text.tag_add("match", pos, end)
+                start = end
+            first = self.doc_text.tag_nextrange("match", "1.0")
+            if first:
+                self.doc_text.see(first[0])
+        self.doc_text.configure(state="disabled")
 
-    def _fiches_du_document(self, chemin):
-        return [f for f in self.carnet.fiches
-                if os.path.normcase(f.get("source", "")) == os.path.normcase(chemin)]
+    def _cards_of_document(self, path):
+        return [f for f in self.book.cards
+                if os.path.normcase(f.get("source", "")) == os.path.normcase(path)]
 
-    def _montrer_compris(self, chemin, doc):
+    def _show_understood(self, path, doc):
         """Show the reformatted document (or the card it was already filed into)."""
-        for w in self.cadre_compris.winfo_children():
+        for w in self.understood_frame.winfo_children():
             w.destroy()
-        rangees = self._fiches_du_document(chemin)
-        genre = doc.get("genre", "autre")
-        if rangees:
-            fiches, titre = rangees, _("Déjà rangé dans le carnet :")
-            self.bouton_fiche_doc.configure(text=_("→  Voir la fiche"), command=lambda: self.voir_fiche(rangees[0]))
-        elif genre in ("compte", "contact") and not doc.get("erreur"):
-            fiches = self._garder_categories(deviner(doc["nom"], doc["texte"], genre))
-            titre = _("Ce que le carnet a compris :")
-            self.bouton_fiche_doc.configure(text=_("＋  Créer une fiche avec ce document"),
-                                            command=self.fiche_depuis_document)
+        rows = self._cards_of_document(path)
+        kind = doc.get("kind", "other")
+        if rows:
+            cards, title_text = rows, _("Already filed in the notebook:")
+            self.doc_card_button.configure(text=_("→  See the card"), command=lambda: self.view_card(rows[0]))
+        elif kind in ("account", "contact") and not doc.get("error"):
+            cards = self._keep_categories(guess(doc["name"], doc["text"], kind))
+            title_text = _("What the notebook understood:")
+            self.doc_card_button.configure(text=_("＋  Create a card from this document"),
+                                           command=self.card_from_document)
         else:
-            self.bouton_fiche_doc.configure(text=_("＋  Créer une fiche avec ce document"),
-                                            command=self.fiche_depuis_document)
-            tk.Label(self.cadre_compris, text=_("Le carnet n'a pas reconnu ce document. Vous pouvez "
-                     "quand même créer une fiche : il vous demandera s'il s'agit d'un mot de passe "
-                     "ou d'un contact."), font=self.f_petit, bg=JAUNE_FOND, fg=JAUNE_TEXTE,
+            self.doc_card_button.configure(text=_("＋  Create a card from this document"),
+                                           command=self.card_from_document)
+            tk.Label(self.understood_frame, text=_("The notebook did not recognise this document. "
+                                                   "You can still create a card: it will ask "
+                                                   "whether it is a password or a contact."), font=self.f_small, bg=YELLOW_BG, fg=YELLOW_TEXT,
                      anchor="w", justify="left", wraplength=700).pack(fill="x")
             return
-        tk.Label(self.cadre_compris, text=titre, font=self.f_gras, bg=JAUNE_FOND,
-                 fg=JAUNE_TEXTE, anchor="w").pack(fill="x")
-        grille = tk.Frame(self.cadre_compris, bg=JAUNE_FOND)
-        grille.pack(fill="x", pady=(4, 0))
+        tk.Label(self.understood_frame, text=title_text, font=self.f_bold, bg=YELLOW_BG,
+                 fg=YELLOW_TEXT, anchor="w").pack(fill="x")
+        grid_frame = tk.Frame(self.understood_frame, bg=YELLOW_BG)
+        grid_frame.pack(fill="x", pady=(4, 0))
         r = 0
-        for fiche in fiches[:6]:
-            lignes = [(_("Nom"), fiche.get("nom", ""))]
-            for champ in ORDRE_CHAMPS.get(fiche.get("type", "compte"), []):
-                valeur = fiche.get(champ, "")
-                if valeur and champ != "notes":
-                    lignes.append((_(LIBELLES_CHAMPS[champ]), valeur.replace("\n", ", ")))
-            lignes += [(p.get("libelle", ""), p.get("valeur", "")) for p in fiche.get("perso", [])]
-            if fiche.get("notes"):
-                lignes.append((_("Notes"), fiche["notes"].replace("\n", " · ")[:120]))
-            for libelle, valeur in lignes:
-                tk.Label(grille, text=deux_points(libelle), font=self.f_petit, bg=JAUNE_FOND,
-                         fg=JAUNE_TEXTE, anchor="w").grid(row=r, column=0, sticky="nw", padx=(0, 12))
-                tk.Label(grille, text=valeur, font=self.f_mdp if libelle == _("Mot de passe")
-                         else self.f_gras, bg=JAUNE_FOND, fg=ENCRE, anchor="w", justify="left",
+        for card in cards[:6]:
+            lines = [(_("Name"), card.get("name", ""))]
+            for field in FIELD_ORDER.get(card.get("type", "account"), []):
+                value = card.get(field, "")
+                if value and field != "notes":
+                    lines.append((_(FIELD_LABELS[field]), value.replace("\n", ", ")))
+            lines += [(p.get("label", ""), p.get("value", "")) for p in card.get("custom", [])]
+            if card.get("notes"):
+                lines.append((_("Notes"), card["notes"].replace("\n", " · ")[:120]))
+            for label, value in lines:
+                tk.Label(grid_frame, text=with_colon(label), font=self.f_small, bg=YELLOW_BG,
+                         fg=YELLOW_TEXT, anchor="w").grid(row=r, column=0, sticky="nw", padx=(0, 12))
+                tk.Label(grid_frame, text=value, font=self.f_password if label == _("Password")
+                         else self.f_bold, bg=YELLOW_BG, fg=INK, anchor="w", justify="left",
                          wraplength=650).grid(row=r, column=1, sticky="w")
                 r += 1
             r += 1
-        if len(fiches) > 6:
-            tk.Label(grille, text=_("… et {n} autres contacts", n=len(fiches) - 6), font=self.f_petit,
-                     bg=JAUNE_FOND, fg=JAUNE_TEXTE).grid(row=r, column=0, columnspan=2, sticky="w")
+        if len(cards) > 6:
+            tk.Label(grid_frame, text=_("… and {n} more contacts", n=len(cards) - 6), font=self.f_small,
+                     bg=YELLOW_BG, fg=YELLOW_TEXT).grid(row=r, column=0, columnspan=2, sticky="w")
 
-    def voir_fiche(self, fiche):
+    def view_card(self, card):
         """Switch to the card's tab and select it."""
-        self.id_courant = fiche["id"]
-        self.afficher_page(fiche.get("type", "compte"))
+        self.current_id = card["id"]
+        self.show_page(card.get("type", "account"))
 
-    def ouvrir_document(self):
-        chemin, doc = self._document_courant()
-        if not chemin:
-            messagebox.showinfo(NOM_APPLI, _("Choisissez d'abord un document dans la liste."))
+    def open_document(self):
+        path, doc = self._current_document()
+        if not path:
+            messagebox.showinfo(APP_NAME, _("First choose a document in the list."))
             return
         try:
-            ouvrir_avec_systeme(chemin)
+            open_with_system(path)
         except OSError as exc:
-            messagebox.showerror(NOM_APPLI, _("Le document n'a pas pu être ouvert.\n\n") + str(exc))
+            messagebox.showerror(APP_NAME, _("The document could not be opened.\n\n") + str(exc))
 
-    def fiche_depuis_document(self):
-        chemin, doc = self._document_courant()
+    def card_from_document(self):
+        path, doc = self._current_document()
         if doc is None:
-            messagebox.showinfo(NOM_APPLI, _("Choisissez d'abord un document dans la liste."))
+            messagebox.showinfo(APP_NAME, _("First choose a document in the list."))
             return
-        if os.path.normcase(chemin) in self.carnet.sources_connues():
+        if os.path.normcase(path) in self.book.known_sources():
             if not messagebox.askyesno(
-                    NOM_APPLI, _("« {nom} » est déjà rangé dans le carnet.\n"
-                                 "En créer une autre fiche quand même ?", nom=doc["nom"]), default="no"):
+                    APP_NAME, _("“{name}” is already filed in the notebook.\nCreate another "
+                                "card anyway?", name=doc["name"]), default="no"):
                 return
-        genre = doc.get("genre", "autre")
-        if genre == "autre":
-            genre = demander_genre(self, doc["nom"])
-            if genre is None:
+        kind = doc.get("kind", "other")
+        if kind == "other":
+            kind = ask_kind(self, doc["name"])
+            if kind is None:
                 return
-        propositions = self._garder_categories(deviner(doc["nom"], doc["texte"], genre))
-        self.carnet.reprendre_source(chemin)
-        maintenant = datetime.now().isoformat(timespec="seconds")
-        fiches = [self.carnet.nouvelle_fiche(source=chemin, source_mtime=doc.get("mtime"),
-                                             importe_le=maintenant, **champs)
-                  for champs in propositions]
-        self.id_courant = fiches[0]["id"]
-        self.programmer_enregistrement()
-        self.afficher_page(genre)
-        if len(fiches) > 1:
-            texte = _("Ce document contenait {n} contacts : ils ont tous été créés.", n=len(fiches))
+        suggestions = self._keep_categories(guess(doc["name"], doc["text"], kind))
+        self.book.restore_source(path)
+        now_str = datetime.now().isoformat(timespec="seconds")
+        cards = [self.book.new_card(source=path, source_mtime=doc.get("mtime"),
+                                    imported_at=now_str, **fields)
+                 for fields in suggestions]
+        self.current_id = cards[0]["id"]
+        self.schedule_save()
+        self.show_page(kind)
+        if len(cards) > 1:
+            text_value = _("This document contained {n} contacts: they have all been created.", n=len(cards))
         else:
-            texte = _("La fiche a été remplie à partir du document.")
-        texte += "\n\n" + _("Vérifiez que chaque information est au bon endroit.")
-        messagebox.showinfo(_("Fiche créée"), texte)
+            text_value = _("The card was filled in from the document.")
+        text_value += "\n\n" + _("Check that each piece of information is in the right place.")
+        messagebox.showinfo(_("Card created"), text_value)
 
     # -------------------------------------------------- drag and drop / import
-    def _activer_glisser_deposer(self):
+    def _enable_drag_and_drop(self):
         """Accept files dragged from Windows Explorer onto the window."""
-        self.depots = queue.Queue()
+        self.drops = queue.Queue()
         if not sys.platform.startswith("win"):
             return
         try:
@@ -2948,10 +2993,10 @@ class Application:
             LRESULT = ctypes.c_ssize_t
             WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT,
                                          wintypes.WPARAM, wintypes.LPARAM)
-            definir = (user32.SetWindowLongPtrW if ctypes.sizeof(ctypes.c_void_p) == 8
-                       else user32.SetWindowLongW)
-            definir.restype = ctypes.c_void_p
-            definir.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_void_p]
+            define = (user32.SetWindowLongPtrW if ctypes.sizeof(ctypes.c_void_p) == 8
+                      else user32.SetWindowLongW)
+            define.restype = ctypes.c_void_p
+            define.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_void_p]
             user32.CallWindowProcW.restype = LRESULT
             user32.CallWindowProcW.argtypes = [ctypes.c_void_p, wintypes.HWND, wintypes.UINT,
                                                wintypes.WPARAM, wintypes.LPARAM]
@@ -2961,335 +3006,335 @@ class Application:
             shell32.DragFinish.argtypes = [ctypes.c_void_p]
             shell32.DragAcceptFiles.argtypes = [wintypes.HWND, wintypes.BOOL]
 
-            hwnd = int(self.racine.wm_frame(), 16)
-            ancienne = {}
+            hwnd = int(self.root.wm_frame(), 16)
+            old_backup = {}
 
             def procedure(h, message, wparam, lparam):
                 if message == WM_DROPFILES:
                     try:
                         n = shell32.DragQueryFileW(wparam, 0xFFFFFFFF, None, 0)
-                        chemins = []
+                        paths = []
                         for i in range(n):
-                            tampon = ctypes.create_unicode_buffer(32768)
-                            shell32.DragQueryFileW(wparam, i, tampon, 32768)
-                            chemins.append(tampon.value)
-                        self.depots.put(chemins)
+                            buffer = ctypes.create_unicode_buffer(32768)
+                            shell32.DragQueryFileW(wparam, i, buffer, 32768)
+                            paths.append(buffer.value)
+                        self.drops.put(paths)
                     finally:
                         shell32.DragFinish(wparam)
                     return 0
-                return user32.CallWindowProcW(ancienne["proc"], h, message, wparam, lparam)
+                return user32.CallWindowProcW(old_backup["proc"], h, message, wparam, lparam)
 
-            self._procedure_depot = WNDPROC(procedure)   # kept in memory (important)
-            ancienne["proc"] = definir(hwnd, GWLP_WNDPROC,
-                                       ctypes.cast(self._procedure_depot, ctypes.c_void_p))
+            self._drop_procedure = WNDPROC(procedure)   # kept in memory (important)
+            old_backup["proc"] = define(hwnd, GWLP_WNDPROC,
+                                        ctypes.cast(self._drop_procedure, ctypes.c_void_p))
             shell32.DragAcceptFiles(hwnd, True)
         except Exception:
             return  # no drag and drop: the "Import files…" button is still there
-        self.racine.after(300, self._surveiller_depots)
+        self.root.after(300, self._watch_drops)
 
-    def _surveiller_depots(self):
+    def _watch_drops(self):
         try:
             while True:
-                self.importer_chemins(self.depots.get_nowait())
+                self.import_paths(self.drops.get_nowait())
         except queue.Empty:
             pass
-        self.racine.after(300, self._surveiller_depots)
+        self.root.after(300, self._watch_drops)
 
-    def choisir_fichiers_a_importer(self):
-        chemins = filedialog.askopenfilenames(
-            title=_("Choisissez les documents à ranger (plusieurs à la fois possible)"),
-            filetypes=[(_("Documents Word et texte"), "*.docx *.txt"), (_("Tous les fichiers"), "*.*")])
-        if chemins:
-            self.importer_chemins(list(chemins))
+    def choose_files_to_import(self):
+        paths = filedialog.askopenfilenames(
+            title=_("Choose the documents to file (several at once is fine)"),
+            filetypes=[(_("Word and text documents"), "*.docx *.txt"), (_("All files"), "*.*")])
+        if paths:
+            self.import_paths(list(paths))
 
-    def importer_chemins(self, chemins):
+    def import_paths(self, paths):
         """File away files (or whole folders) dragged in or chosen."""
-        dossier_txt = self.carnet.reglages.get("dossier_txt", "")
-        fichiers, anciens_doc, ignores = [], 0, 0
-        for chemin in chemins:
-            if os.path.isdir(chemin):
-                trouves, anciens = lister_documents(chemin, [dossier_txt])
-                fichiers += trouves
-                anciens_doc += anciens
-            elif os.path.basename(chemin).startswith("~$"):
+        txt_folder = self.book.settings.get("txt_folder", "")
+        files, old_doc_count, ignores = [], 0, 0
+        for path in paths:
+            if os.path.isdir(path):
+                found, old_entries = list_documents(path, [txt_folder])
+                files += found
+                old_doc_count += old_entries
+            elif os.path.basename(path).startswith("~$"):
                 continue
-            elif chemin.lower().endswith(EXTENSIONS_LUES):
-                fichiers.append(chemin)
-            elif chemin.lower().endswith(".doc"):
-                anciens_doc += 1
+            elif path.lower().endswith(READ_EXTENSIONS):
+                files.append(path)
+            elif path.lower().endswith(".doc"):
+                old_doc_count += 1
             else:
                 ignores += 1
 
-        deja = self.carnet.sources_connues()
-        a_ranger, non_reconnus, nb_deja = [], [], 0
-        for chemin in sorted(set(fichiers), key=lambda c: cle_tri(Path(c).stem)):
-            if os.path.normcase(chemin) in deja:
-                nb_deja += 1
+        already = self.book.known_sources()
+        to_file, unrecognised, already_count = [], [], 0
+        for path in sorted(set(files), key=lambda c: sort_key(Path(c).stem)):
+            if os.path.normcase(path) in already:
+                already_count += 1
                 continue
             try:
-                texte = lire_document(chemin)
+                text_value = read_document(path)
             except Exception:
-                non_reconnus.append((chemin, ""))
+                unrecognised.append((path, ""))
                 continue
-            genre = classer_document(texte)
-            if genre == "autre":
-                non_reconnus.append((chemin, texte))
+            kind = classify_document(text_value)
+            if kind == "other":
+                unrecognised.append((path, text_value))
             else:
-                a_ranger.append((chemin, self._garder_categories(
-                    deviner(Path(chemin).stem, texte, genre))))
+                to_file.append((path, self._keep_categories(
+                    guess(Path(path).stem, text_value, kind))))
 
-        nb_comptes = sum(1 for _c, fs in a_ranger for f in fs if f["type"] == "compte")
-        nb_contacts = sum(1 for _c, fs in a_ranger for f in fs if f["type"] == "contact")
-        remarques = []
-        if nb_deja:
-            remarques.append(n_(nb_deja, "{n} document déjà rangé : ignoré.",
-                                "{n} documents déjà rangés : ignorés."))
-        if anciens_doc:
-            remarques.append(n_(anciens_doc, "{n} ancien fichier .doc non lu (à enregistrer en .docx avec Word).",
-                                "{n} anciens fichiers .doc non lus (à enregistrer en .docx avec Word)."))
+        account_count = sum(1 for _c, fs in to_file for f in fs if f["type"] == "account")
+        contact_count = sum(1 for _c, fs in to_file for f in fs if f["type"] == "contact")
+        remarks = []
+        if already_count:
+            remarks.append(n_(already_count, "{n} document already filed: skipped.",
+                              "{n} documents already filed: skipped."))
+        if old_doc_count:
+            remarks.append(n_(old_doc_count, "{n} old .doc file not read (save it as .docx with Word).",
+                              "{n} old .doc files not read (save them as .docx with Word)."))
         if ignores:
-            remarques.append(n_(ignores, "{n} fichier d'un autre type ignoré.",
-                                "{n} fichiers d'un autre type ignorés."))
-        if non_reconnus:
-            noms = ", ".join(Path(c).stem for c, _t in non_reconnus[:6])
-            noms += "…" if len(non_reconnus) > 6 else ""
-            remarques.append(n_(len(non_reconnus), "{n} document non reconnu : {noms}",
-                                "{n} documents non reconnus : {noms}", noms=noms))
+            remarks.append(n_(ignores, "{n} file of another type skipped.",
+                              "{n} files of another type skipped."))
+        if unrecognised:
+            names = ", ".join(Path(c).stem for c, _t in unrecognised[:6])
+            names += "…" if len(unrecognised) > 6 else ""
+            remarks.append(n_(len(unrecognised), "{n} document not recognised: {names}",
+                              "{n} documents not recognised: {names}", names=names))
 
-        if not a_ranger and not non_reconnus:
-            messagebox.showinfo(NOM_APPLI, _("Rien de nouveau à ranger.\n\n") + "\n".join(remarques))
+        if not to_file and not unrecognised:
+            messagebox.showinfo(APP_NAME, _("Nothing new to file.\n\n") + "\n".join(remarks))
             return
-        if a_ranger and not messagebox.askyesno(
-                _("Ranger ces documents ?"),
-                _("Le carnet va ranger :") + "\n\n   • "
-                + n_(nb_comptes, "{n} mot de passe  →  « Mes mots de passe »",
-                     "{n} mots de passe  →  « Mes mots de passe »") + "\n   • "
-                + n_(nb_contacts, "{n} contact  →  « Mes contacts »",
-                     "{n} contacts  →  « Mes contacts »") + "\n\n"
-                + ("\n".join(remarques) + "\n\n" if remarques else "")
-                + _("Les documents eux-mêmes ne sont pas modifiés. Continuer ?")):
+        if to_file and not messagebox.askyesno(
+                _("File these documents?"),
+                _("The notebook will file:") + "\n\n   • "
+                + n_(account_count, "{n} password  →  “My passwords”",
+                     "{n} passwords  →  “My passwords”") + "\n   • "
+                + n_(contact_count, "{n} contact  →  “My contacts”",
+                     "{n} contacts  →  “My contacts”") + "\n\n"
+                + ("\n".join(remarks) + "\n\n" if remarks else "")
+                + _("The documents themselves are not changed. Continue?")):
             return
-        forcer = False
-        if non_reconnus:
-            forcer = messagebox.askyesno(
-                _("Documents non reconnus"),
-                n_(len(non_reconnus), "{n} document ne ressemble ni à un mot de passe ni à un contact.",
-                   "{n} documents ne ressemblent ni à un mot de passe ni à un contact.")
-                + "\n\n" + _("Les ranger quand même dans « Mes mots de passe » ?\n"
-                               "(leur texte ira dans les Notes de la fiche)"), default="no")
+        forced = False
+        if unrecognised:
+            forced = messagebox.askyesno(
+                _("Documents not recognised"),
+                n_(len(unrecognised), "{n} document looks like neither a password nor a contact.",
+                   "{n} documents look like neither a password nor a contact.")
+                + "\n\n" + _("File them anyway in “My passwords”?\n(their text will go into the "
+                             "card's Notes)"), default="no")
         try:
-            self.carnet.enregistrer()
-            self.carnet.sauvegarde_du_jour(force=True)
+            self.book.save()
+            self.book.daily_backup(force=True)
         except OSError:
             pass
-        premiere = None
-        maintenant = datetime.now().isoformat(timespec="seconds")
-        for chemin, propositions in a_ranger:
-            for champs in propositions:
-                self.carnet.reprendre_source(chemin)
-                fiche = self.carnet.nouvelle_fiche(source=chemin, importe_le=maintenant,
-                                                   source_mtime=self._mtime(chemin), **champs)
-                premiere = premiere or fiche
-        if forcer:
-            for chemin, texte in non_reconnus:
-                champs = self._garder_categories([deviner_fiche(Path(chemin).stem, texte)])[0]
-                self.carnet.reprendre_source(chemin)
-                fiche = self.carnet.nouvelle_fiche(source=chemin, importe_le=maintenant,
-                                                   source_mtime=self._mtime(chemin), **champs)
-                premiere = premiere or fiche
-        if premiere is None:
+        first_line = None
+        now_str = datetime.now().isoformat(timespec="seconds")
+        for path, suggestions in to_file:
+            for fields in suggestions:
+                self.book.restore_source(path)
+                card = self.book.new_card(source=path, imported_at=now_str,
+                                          source_mtime=self._mtime(path), **fields)
+                first_line = first_line or card
+        if forced:
+            for path, text_value in unrecognised:
+                fields = self._keep_categories([guess_card(Path(path).stem, text_value)])[0]
+                self.book.restore_source(path)
+                card = self.book.new_card(source=path, imported_at=now_str,
+                                          source_mtime=self._mtime(path), **fields)
+                first_line = first_line or card
+        if first_line is None:
             return
-        self.enregistrer()
-        self.id_courant = premiere["id"]
-        total = nb_comptes + nb_contacts + (len(non_reconnus) if forcer else 0)
-        self.afficher_page("contact" if nb_contacts > nb_comptes + (len(non_reconnus) if forcer else 0)
-                           else "compte")
-        messagebox.showinfo(_("C'est rangé !"), n_(total, "{n} fiche créée.", "{n} fiches créées."))
+        self.save()
+        self.current_id = first_line["id"]
+        total = account_count + contact_count + (len(unrecognised) if forced else 0)
+        self.show_page("contact" if contact_count > account_count + (len(unrecognised) if forced else 0)
+                       else "account")
+        messagebox.showinfo(_("All filed!"), n_(total, "{n} card created.", "{n} cards created."))
 
     @staticmethod
-    def _mtime(chemin):
+    def _mtime(path):
         try:
-            return os.stat(chemin).st_mtime
+            return os.stat(path).st_mtime
         except OSError:
             return None
 
-    def _garder_categories(self, propositions):
+    def _keep_categories(self, suggestions):
         """A guessed category is only kept if it exists in the settings."""
-        for champs in propositions:
-            if "categorie" in champs:
-                champs["categorie"] = self.carnet.categorie_existante(champs["categorie"])
-        return propositions
+        for fields in suggestions:
+            if "category" in fields:
+                fields["category"] = self.book.existing_category(fields["category"])
+        return suggestions
 
-    def importer_tout(self):
+    def import_all(self):
         """Former "File everything" button: it is now the synchronization."""
-        self.synchroniser_maintenant()
+        self.sync_now()
 
 
-def demander_texte(appli, titre, question, valeur=""):
+def ask_text(app, title_text, question, value=""):
     """Small window to type some text (in large print). None if cancelled."""
-    reponse = {"texte": None}
-    f = tk.Toplevel(appli.racine)
-    f.title(titre)
-    f.configure(bg=BLANC, padx=24, pady=18)
-    f.transient(appli.racine)
+    answer = {"text": None}
+    f = tk.Toplevel(app.root)
+    f.title(title_text)
+    f.configure(bg=WHITE, padx=24, pady=18)
+    f.transient(app.root)
     f.resizable(False, False)
-    tk.Label(f, text=question, font=appli.f_gras, bg=BLANC, fg=ENCRE).pack(anchor="w")
-    var = tk.StringVar(value=valeur)
-    saisie = appli.champ_texte(f, var)
-    saisie.pack(fill="x", ipady=4, pady=(6, 14))
+    tk.Label(f, text=question, font=app.f_bold, bg=WHITE, fg=INK).pack(anchor="w")
+    var = tk.StringVar(value=value)
+    entry_widget = app.text_entry(f, var)
+    entry_widget.pack(fill="x", ipady=4, pady=(6, 14))
 
-    def valider(_evenement=None):
+    def validate(_event=None):
         if var.get().strip():
-            reponse["texte"] = var.get()
+            answer["text"] = var.get()
             f.destroy()
 
-    saisie.bind("<Return>", valider)
-    boutons = tk.Frame(f, bg=BLANC)
-    boutons.pack(fill="x")
-    appli.bouton(boutons, _("Annuler"), f.destroy).pack(side="right")
-    appli.bouton(boutons, _("✔  Valider"), valider, "vert").pack(side="right", padx=10)
+    entry_widget.bind("<Return>", validate)
+    buttons = tk.Frame(f, bg=WHITE)
+    buttons.pack(fill="x")
+    app.button(buttons, _("Cancel"), f.destroy).pack(side="right")
+    app.button(buttons, _("✔  OK"), validate, "green").pack(side="right", padx=10)
     f.grab_set()
-    saisie.focus_set()
-    saisie.select_range(0, "end")
-    appli.racine.wait_window(f)
-    return reponse["texte"]
+    entry_widget.focus_set()
+    entry_widget.select_range(0, "end")
+    app.root.wait_window(f)
+    return answer["text"]
 
 
-def choisir_couleur(appli, nom):
+def choose_color(app, name):
     """Grid of soft colors (all readable with dark text)."""
-    reponse = {"couleur": None}
-    f = tk.Toplevel(appli.racine)
-    f.title(_("Couleur de la catégorie"))
-    f.configure(bg=BLANC, padx=24, pady=18)
-    f.transient(appli.racine)
+    answer = {"color": None}
+    f = tk.Toplevel(app.root)
+    f.title(_("Category colour"))
+    f.configure(bg=WHITE, padx=24, pady=18)
+    f.transient(app.root)
     f.resizable(False, False)
-    tk.Label(f, text=_("Couleur pour « {nom} » :", nom=nom), font=appli.f_gras, bg=BLANC,
-             fg=ENCRE).pack(anchor="w", pady=(0, 10))
-    grille = tk.Frame(f, bg=BLANC)
-    grille.pack()
+    tk.Label(f, text=_("Colour for “{name}”:", name=name), font=app.f_bold, bg=WHITE,
+             fg=INK).pack(anchor="w", pady=(0, 10))
+    grid_frame = tk.Frame(f, bg=WHITE)
+    grid_frame.pack()
 
-    def choisir(couleur):
-        reponse["couleur"] = couleur
+    def choose(color):
+        answer["color"] = color
         f.destroy()
 
-    for i, (libelle, couleur) in enumerate(PALETTE_CATEGORIES):
-        tk.Button(grille, text=_(libelle), font=appli.f_gras, bg=couleur, fg=TEXTE_SUR_PASTEL,
-                  activebackground=couleur, activeforeground=TEXTE_SUR_PASTEL, width=10,
+    for i, (label, color) in enumerate(CATEGORY_PALETTE):
+        tk.Button(grid_frame, text=_(label), font=app.f_bold, bg=color, fg=TEXT_ON_PASTEL,
+                  activebackground=color, activeforeground=TEXT_ON_PASTEL, width=10,
                   relief="solid", bd=1, pady=10, cursor="hand2", highlightthickness=0,
-                  command=lambda c=couleur: choisir(c)).grid(row=i // 5, column=i % 5,
-                                                              padx=4, pady=4)
-    appli.bouton(f, _("Annuler"), f.destroy).pack(anchor="e", pady=(12, 0))
+                  command=lambda c=color: choose(c)).grid(row=i // 5, column=i % 5,
+                                                          padx=4, pady=4)
+    app.button(f, _("Cancel"), f.destroy).pack(anchor="e", pady=(12, 0))
     f.grab_set()
-    appli.racine.wait_window(f)
-    return reponse["couleur"]
+    app.root.wait_window(f)
+    return answer["color"]
 
 
-def demander_genre(appli, nom):
+def ask_kind(app, name):
     """Small window asking: is it a password or a contact?"""
-    reponse = {"genre": None}
-    f = tk.Toplevel(appli.racine)
-    f.title(_("Quel genre de document ?"))
-    f.configure(bg=BLANC, padx=24, pady=18)
-    f.transient(appli.racine)
+    answer = {"kind": None}
+    f = tk.Toplevel(app.root)
+    f.title(_("What kind of document?"))
+    f.configure(bg=WHITE, padx=24, pady=18)
+    f.transient(app.root)
     f.resizable(False, False)
-    tk.Label(f, text=f"« {nom} »\n\n" + _("Que contient ce document ?"), font=appli.f_gras,
-             bg=BLANC, fg=ENCRE, justify="left").pack(anchor="w", pady=(0, 14))
+    tk.Label(f, text=f"« {name} »\n\n" + _("What does this document contain?"), font=app.f_bold,
+             bg=WHITE, fg=INK, justify="left").pack(anchor="w", pady=(0, 14))
 
-    def choisir(genre):
-        reponse["genre"] = genre
+    def choose(kind):
+        answer["kind"] = kind
         f.destroy()
 
-    boutons = tk.Frame(f, bg=BLANC)
-    boutons.pack(fill="x")
-    appli.bouton(boutons, _("Un mot de passe"), lambda: choisir("compte"), "bleu").pack(side="left")
-    appli.bouton(boutons, _("Un contact"), lambda: choisir("contact"), "bleu").pack(side="left", padx=10)
-    appli.bouton(boutons, _("Annuler"), f.destroy).pack(side="right")
+    buttons = tk.Frame(f, bg=WHITE)
+    buttons.pack(fill="x")
+    app.button(buttons, _("A password"), lambda: choose("account"), "blue").pack(side="left")
+    app.button(buttons, _("A contact"), lambda: choose("contact"), "blue").pack(side="left", padx=10)
+    app.button(buttons, _("Cancel"), f.destroy).pack(side="right")
     f.grab_set()
     f.focus_set()
-    appli.racine.wait_window(f)
-    return reponse["genre"]
+    app.root.wait_window(f)
+    return answer["kind"]
 
 
-class FenetreGenerateur:
+class GeneratorWindow:
     """Small window to create a password."""
 
-    def __init__(self, appli):
-        self.appli = appli
-        f = self.fenetre = tk.Toplevel(appli.racine)
-        f.title(_("Créer un nouveau mot de passe"))
-        f.configure(bg=BLANC, padx=24, pady=18)
-        f.transient(appli.racine)
+    def __init__(self, app):
+        self.app = app
+        f = self.window = tk.Toplevel(app.root)
+        f.title(_("Create a new password"))
+        f.configure(bg=WHITE, padx=24, pady=18)
+        f.transient(app.root)
         f.resizable(False, False)
 
-        tk.Label(f, text=_("Créer un nouveau mot de passe"), font=appli.f_titre,
-                 bg=BLANC, fg=ENCRE).pack(anchor="w")
+        tk.Label(f, text=_("Create a new password"), font=app.f_title,
+                 bg=WHITE, fg=INK).pack(anchor="w")
 
-        self.var_genre = tk.StringVar(value="facile")
-        choix = tk.Frame(f, bg=BLANC)
-        choix.pack(anchor="w", pady=(12, 6))
-        for valeur, texte in (("facile", _("Facile à lire (des mots)")),
-                              ("solide", _("Très solide (lettres et signes)"))):
-            tk.Radiobutton(choix, text=texte, value=valeur, variable=self.var_genre,
-                           command=self.nouveau, font=appli.f_base, bg=BLANC,
-                           fg=ENCRE, activebackground=BLANC, selectcolor=BLEU_CLAIR,
+        self.kind_var = tk.StringVar(value="easy")
+        selection = tk.Frame(f, bg=WHITE)
+        selection.pack(anchor="w", pady=(12, 6))
+        for value, text_value in (("easy", _("Easy to read (words)")),
+                                  ("strong", _("Very strong (letters and symbols)"))):
+            tk.Radiobutton(selection, text=text_value, value=value, variable=self.kind_var,
+                           command=self.new, font=app.f_base, bg=WHITE,
+                           fg=INK, activebackground=WHITE, selectcolor=BLUE_LIGHT,
                            anchor="w").pack(anchor="w", pady=2)
 
-        ligne = tk.Frame(f, bg=BLANC)
-        ligne.pack(anchor="w", pady=6)
-        tk.Label(ligne, text=_("Longueur :"), font=appli.f_gras, bg=BLANC, fg=GRIS).pack(side="left")
-        self.var_longueur = tk.IntVar(value=4)
-        self.reglette = tk.Scale(ligne, from_=3, to=6, orient="horizontal",
-                                 variable=self.var_longueur, length=260,
-                                 command=lambda v: self.nouveau(), font=appli.f_base,
-                                 bg=BLANC, highlightthickness=0, sliderlength=36, width=22)
-        self.reglette.pack(side="left", padx=10)
-        self.etiquette_unite = tk.Label(ligne, text=_("mots"), font=appli.f_base, bg=BLANC, fg=GRIS)
-        self.etiquette_unite.pack(side="left")
+        line = tk.Frame(f, bg=WHITE)
+        line.pack(anchor="w", pady=6)
+        tk.Label(line, text=_("Length:"), font=app.f_bold, bg=WHITE, fg=GREY).pack(side="left")
+        self.length_var = tk.IntVar(value=4)
+        self.slider = tk.Scale(line, from_=3, to=6, orient="horizontal",
+                               variable=self.length_var, length=260,
+                               command=lambda v: self.new(), font=app.f_base,
+                               bg=WHITE, highlightthickness=0, sliderlength=36, width=22)
+        self.slider.pack(side="left", padx=10)
+        self.unit_label = tk.Label(line, text=_("words"), font=app.f_base, bg=WHITE, fg=GREY)
+        self.unit_label.pack(side="left")
 
-        self.var_mdp = tk.StringVar()
-        tk.Entry(f, textvariable=self.var_mdp, font=appli.f_mdp, bg=JAUNE_FOND, fg=ENCRE,
+        self.password_var = tk.StringVar()
+        tk.Entry(f, textvariable=self.password_var, font=app.f_password, bg=YELLOW_BG, fg=INK,
                  relief="solid", bd=1, justify="center", width=28,
-                 highlightthickness=2, highlightbackground=JAUNE_BORD,
-                 readonlybackground=JAUNE_FOND, state="readonly").pack(fill="x", pady=12, ipady=8)
+                 highlightthickness=2, highlightbackground=YELLOW_BORDER,
+                 readonlybackground=YELLOW_BG, state="readonly").pack(fill="x", pady=12, ipady=8)
 
-        boutons = tk.Frame(f, bg=BLANC)
-        boutons.pack(fill="x", pady=(4, 0))
-        appli.bouton(boutons, _("↻  Un autre"), self.nouveau).pack(side="left")
-        self.bouton_copier = appli.bouton(boutons, _("Copier"), None)
-        self.bouton_copier.configure(command=lambda: appli.copier(self.var_mdp.get(), self.bouton_copier))
-        self.bouton_copier.pack(side="left", padx=10)
-        appli.bouton(boutons, _("Annuler"), f.destroy).pack(side="right")
-        appli.bouton(boutons, _("✔  Utiliser ce mot de passe"), self.utiliser, "vert").pack(side="right", padx=10)
+        buttons = tk.Frame(f, bg=WHITE)
+        buttons.pack(fill="x", pady=(4, 0))
+        app.button(buttons, _("↻  Another one"), self.new).pack(side="left")
+        self.copy_button = app.button(buttons, _("Copy"), None)
+        self.copy_button.configure(command=lambda: app.copy(self.password_var.get(), self.copy_button))
+        self.copy_button.pack(side="left", padx=10)
+        app.button(buttons, _("Cancel"), f.destroy).pack(side="right")
+        app.button(buttons, _("✔  Use this password"), self.use, "green").pack(side="right", padx=10)
 
-        tk.Label(f, text=_("L'ancien mot de passe sera gardé dans les notes de la fiche."),
-                 font=appli.f_petit, bg=BLANC, fg=GRIS).pack(anchor="w", pady=(12, 0))
+        tk.Label(f, text=_("The old password will be kept in the card's notes."),
+                 font=app.f_small, bg=WHITE, fg=GREY).pack(anchor="w", pady=(12, 0))
 
-        self._genre_precedent = None
-        self.nouveau()
+        self._previous_kind = None
+        self.new()
         f.grab_set()
         f.focus_set()
 
-    def nouveau(self):
-        genre = self.var_genre.get()
-        if genre != self._genre_precedent:
-            self._genre_precedent = genre
-            if genre == "facile":
-                self.reglette.configure(from_=3, to=6)
-                self.var_longueur.set(4)
-                self.etiquette_unite.configure(text=_("mots"))
+    def new(self):
+        kind = self.kind_var.get()
+        if kind != self._previous_kind:
+            self._previous_kind = kind
+            if kind == "easy":
+                self.slider.configure(from_=3, to=6)
+                self.length_var.set(4)
+                self.unit_label.configure(text=_("words"))
             else:
-                self.reglette.configure(from_=12, to=32)
-                self.var_longueur.set(16)
-                self.etiquette_unite.configure(text=_("caractères"))
-        n = self.var_longueur.get()
-        if genre == "facile":
-            self.var_mdp.set(generer_phrase(n))
+                self.slider.configure(from_=12, to=32)
+                self.length_var.set(16)
+                self.unit_label.configure(text=_("characters"))
+        n = self.length_var.get()
+        if kind == "easy":
+            self.password_var.set(generate_passphrase(n))
         else:
-            self.var_mdp.set(generer_mot_de_passe(n))
+            self.password_var.set(generate_password(n))
 
-    def utiliser(self):
-        self.appli.remplacer_mot_de_passe(self.var_mdp.get())
-        self.fenetre.destroy()
+    def use(self):
+        self.app.replace_password(self.password_var.get())
+        self.window.destroy()
 
 
 # ---------------------------------------------------------------------------
@@ -3297,436 +3342,434 @@ class FenetreGenerateur:
 # on Mac, the app is simply dragged into "Applications")
 # ---------------------------------------------------------------------------
 
-EDITEUR = "Louis"
-CLE_DESINSTALLATION = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\PocketBook"
+PUBLISHER = "Louis"
+UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\PocketBook"
 
 
-def dossier_special(numero, secours):
+def special_folder(num, fallback_path):
     """Windows folder (Desktop = 0x10, Start menu Programs = 0x02)."""
     try:
         import ctypes
         from ctypes import wintypes
-        tampon = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-        if ctypes.windll.shell32.SHGetFolderPathW(None, numero, None, 0, tampon) == 0:
-            return Path(tampon.value)
+        buffer = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+        if ctypes.windll.shell32.SHGetFolderPathW(None, num, None, 0, buffer) == 0:
+            return Path(buffer.value)
     except Exception:
         pass
-    return secours
+    return fallback_path
 
 
-def dossier_bureau_linux():
+def linux_desktop_folder():
     try:
         import subprocess
-        chemin = subprocess.run(["xdg-user-dir", "DESKTOP"], capture_output=True,
-                                text=True, timeout=5).stdout.strip()
-        if chemin and os.path.isdir(chemin):
-            return Path(chemin)
+        path = subprocess.run(["xdg-user-dir", "DESKTOP"], capture_output=True,
+                              text=True, timeout=5).stdout.strip()
+        if path and os.path.isdir(path):
+            return Path(path)
     except Exception:
         pass
     return Path.home() / "Desktop"
 
 
-def installation_possible():
+def can_install():
     """Only the built program (.exe, Linux binary) installs itself."""
-    return getattr(sys, "frozen", False) and (EST_WINDOWS or EST_LINUX)
+    return getattr(sys, "frozen", False) and (IS_WINDOWS or IS_LINUX)
 
 
-def chemins_installation():
-    if EST_WINDOWS:
+def install_paths():
+    if IS_WINDOWS:
         base = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
         return {
-            "dossier": base / "Pocket Book",
+            "folder": base / "Pocket Book",
             "exe": base / "Pocket Book" / "Pocket Book.exe",
-            "bureau": dossier_special(0x10, Path.home() / "Desktop") / "Pocket Book.lnk",
-            "menu": dossier_special(0x02, Path.home()) / "Pocket Book.lnk",
+            "desktop": special_folder(0x10, Path.home() / "Desktop") / "Pocket Book.lnk",
+            "menu": special_folder(0x02, Path.home()) / "Pocket Book.lnk",
         }
-    donnees = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share"))
+    data = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share"))
     return {
-        "dossier": donnees / "pocket-book",
-        "exe": donnees / "pocket-book" / "pocket-book",
-        "icone": donnees / "pocket-book" / "pocketbook.png",
-        "bureau": dossier_bureau_linux() / "pocket-book.desktop",
-        "menu": donnees / "applications" / "pocket-book.desktop",
-        "commande": Path.home() / ".local" / "bin" / "pocket-book",
-        "options": donnees / "pocket-book" / "installation.json",
+        "folder": data / "pocket-book",
+        "exe": data / "pocket-book" / "pocket-book",
+        "icon": data / "pocket-book" / "pocketbook.png",
+        "desktop": linux_desktop_folder() / "pocket-book.desktop",
+        "menu": data / "applications" / "pocket-book.desktop",
+        "command": Path.home() / ".local" / "bin" / "pocket-book",
+        "options": data / "pocket-book" / "installation.json",
     }
 
 
-def creer_raccourci(lien, cible):
+def create_shortcut(link, target_path):
     """Windows: .lnk shortcut (built-in Windows tool). Linux: .desktop launcher."""
     import subprocess
-    lien = Path(lien)
-    lien.parent.mkdir(parents=True, exist_ok=True)
-    if EST_WINDOWS:
-        script = ("$r = (New-Object -ComObject WScript.Shell).CreateShortcut($env:MC_LIEN);"
-                  "$r.TargetPath = $env:MC_CIBLE;"
-                  "$r.WorkingDirectory = Split-Path $env:MC_CIBLE;"
-                  "$r.IconLocation = $env:MC_CIBLE + ',0';"
+    link = Path(link)
+    link.parent.mkdir(parents=True, exist_ok=True)
+    if IS_WINDOWS:
+        script = ("$r = (New-Object -ComObject WScript.Shell).CreateShortcut($env:MC_LINK);"
+                  "$r.TargetPath = $env:MC_TARGET;"
+                  "$r.WorkingDirectory = Split-Path $env:MC_TARGET;"
+                  "$r.IconLocation = $env:MC_TARGET + ',0';"
                   "$r.Description = 'Pocket Book';"
                   "$r.Save()")
-        env = dict(os.environ, MC_LIEN=str(lien), MC_CIBLE=str(cible))
+        env = dict(os.environ, MC_LINK=str(link), MC_TARGET=str(target_path))
         subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
                         "-Command", script], env=env, check=True, timeout=30,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         return
-    icone = chemins_installation()["icone"]
-    lien.write_text(
+    icon_path = install_paths()["icon"]
+    link.write_text(
         "[Desktop Entry]\n"
         "Type=Application\n"
-        f"Name={NOM_APPLI}\n"
-        f"Comment={_('Mots de passe et contacts, sans internet')}\n"
-        f'Exec="{cible}"\n'
-        f"Icon={icone}\n"
+        f"Name={APP_NAME}\n"
+        f"Comment={_('Passwords and contacts, without internet')}\n"
+        f'Exec="{target_path}"\n'
+        f"Icon={icon_path}\n"
         "Terminal=false\n"
         "Categories=Utility;Office;\n", encoding="utf-8")
-    os.chmod(lien, 0o755)
+    os.chmod(link, 0o755)
     try:  # GNOME: allow launching from the Desktop
-        subprocess.run(["gio", "set", str(lien), "metadata::trusted", "true"],
+        subprocess.run(["gio", "set", str(link), "metadata::trusted", "true"],
                        capture_output=True, timeout=5)
     except Exception:
         pass
 
 
-def meme_fichier(a, b):
+def same_file(a, b):
     try:
         return os.path.normcase(str(Path(a).resolve())) == os.path.normcase(str(Path(b).resolve()))
     except OSError:
         return False
 
 
-def lire_registre(nom, defaut=None):
+def read_registry(name, fallback=None):
     try:
         import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, CLE_DESINSTALLATION) as cle:
-            return winreg.QueryValueEx(cle, nom)[0]
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY) as key:
+            return winreg.QueryValueEx(key, name)[0]
     except (OSError, ImportError):
-        return defaut
+        return fallback
 
 
-def option_bureau():
+def desktop_option():
     """Had the user chosen a Desktop icon?"""
-    if EST_WINDOWS:
-        return bool(lire_registre("RaccourciBureau", 1))
+    if IS_WINDOWS:
+        return bool(read_registry("DesktopShortcut", read_registry("RaccourciBureau", 1)))
     try:
-        with open(chemins_installation()["options"], encoding="utf-8") as f:
-            return bool(json.load(f).get("bureau", True))
+        with open(install_paths()["options"], encoding="utf-8") as f:
+            options = json.load(f)
+        return bool(options.get("desktop", options.get("bureau", True)))   # "bureau": before 1.1
     except (OSError, ValueError):
         return True
 
 
-def deja_installe():
-    return chemins_installation()["exe"].exists()
+def already_installed():
+    return install_paths()["exe"].exists()
 
 
-def inscrire_dans_windows(exe, avec_bureau):
+def register_in_windows(exe, with_desktop):
     """Make "Pocket Book" appear in Settings > Apps (so it can be uninstalled)."""
     import winreg
-    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CLE_DESINSTALLATION) as cle:
-        valeurs = {
-            "DisplayName": NOM_APPLI,
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY) as key:
+        value_list = {
+            "DisplayName": APP_NAME,
             "DisplayVersion": VERSION,
-            "Publisher": EDITEUR,
+            "Publisher": PUBLISHER,
             "DisplayIcon": f"{exe},0",
             "InstallLocation": str(Path(exe).parent),
-            "UninstallString": f'"{exe}" --desinstaller',
+            "UninstallString": f'"{exe}" --uninstall',
             "InstallDate": datetime.now().strftime("%Y%m%d"),
         }
-        for nom, valeur in valeurs.items():
-            winreg.SetValueEx(cle, nom, 0, winreg.REG_SZ, valeur)
-        for nom, valeur in (("NoModify", 1), ("NoRepair", 1),
+        for name, value in value_list.items():
+            winreg.SetValueEx(key, name, 0, winreg.REG_SZ, value)
+        for name, value in (("NoModify", 1), ("NoRepair", 1),
                             ("EstimatedSize", max(1, os.path.getsize(exe) // 1024)),
-                            ("RaccourciBureau", 1 if avec_bureau else 0)):
-            winreg.SetValueEx(cle, nom, 0, winreg.REG_DWORD, valeur)
+                            ("DesktopShortcut", 1 if with_desktop else 0)):
+            winreg.SetValueEx(key, name, 0, winreg.REG_DWORD, value)
 
 
-def installer(exe_source, avec_bureau):
+def install(source_exe, with_desktop):
     """Copy the program, create the shortcuts, register it with the system.
 
     Returns (success, error message).
     """
-    chemins = chemins_installation()
-    exe = chemins["exe"]
+    paths = install_paths()
+    exe = paths["exe"]
     try:
         exe.parent.mkdir(parents=True, exist_ok=True)
-        if not meme_fichier(exe_source, exe):
-            if EST_LINUX and exe.exists():
+        if not same_file(source_exe, exe):
+            if IS_LINUX and exe.exists():
                 exe.unlink()  # Linux: a program can be replaced even while it is running
-            shutil.copy2(exe_source, exe)
-        if EST_LINUX:
+            shutil.copy2(source_exe, exe)
+        if IS_LINUX:
             os.chmod(exe, 0o755)
-            shutil.copy2(ressource("pocketbook.png"), chemins["icone"])
+            shutil.copy2(resource("pocketbook.png"), paths["icon"])
     except PermissionError:
-        return False, _("Pocket Book est sans doute encore ouvert.\n"
-                        "Fermez-le, puis cliquez à nouveau sur « Installer ».")
+        return False, _("Pocket Book is probably still open.\nClose it, then click “Install” again.")
     except OSError as exc:
-        return False, _("La copie du programme a échoué.") + "\n\n" + str(exc)
+        return False, _("Copying the program failed.") + "\n\n" + str(exc)
 
-    liens = [chemins["menu"]] + ([chemins["bureau"]] if avec_bureau else [])
-    for lien in liens:
+    links = [paths["menu"]] + ([paths["desktop"]] if with_desktop else [])
+    for link in links:
         try:
-            creer_raccourci(lien, exe)
+            create_shortcut(link, exe)
         except Exception:
             pass
-    if not avec_bureau and chemins["bureau"].exists():
+    if not with_desktop and paths["desktop"].exists():
         try:
-            chemins["bureau"].unlink()
+            paths["desktop"].unlink()
         except OSError:
             pass
     try:
-        if EST_WINDOWS:
-            inscrire_dans_windows(exe, avec_bureau)
+        if IS_WINDOWS:
+            register_in_windows(exe, with_desktop)
         else:
-            ecrire_json_sur(chemins["options"], {"bureau": avec_bureau, "version": VERSION})
-            commande = chemins["commande"]
-            commande.parent.mkdir(parents=True, exist_ok=True)
-            if commande.is_symlink() or commande.exists():
-                commande.unlink()
-            commande.symlink_to(exe)
+            write_json_safely(paths["options"], {"desktop": with_desktop, "version": VERSION})
+            command = paths["command"]
+            command.parent.mkdir(parents=True, exist_ok=True)
+            if command.is_symlink() or command.exists():
+                command.unlink()
+            command.symlink_to(exe)
     except Exception:
         pass
     return True, ""
 
 
-def retirer_installation(supprimer_donnees):
+def remove_installation(delete_data):
     """Remove the program, shortcuts and registration. Returns a closing text."""
     import subprocess
-    chemins = chemins_installation()
-    for cle in ("bureau", "menu", "commande"):
-        lien = chemins.get(cle)
+    paths = install_paths()
+    for key in ("desktop", "menu", "command"):
+        link = paths.get(key)
         try:
-            if lien and (lien.exists() or lien.is_symlink()):
-                lien.unlink()
+            if link and (link.exists() or link.is_symlink()):
+                link.unlink()
         except OSError:
             pass
-    if EST_WINDOWS:
+    if IS_WINDOWS:
         try:
             import winreg
-            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, CLE_DESINSTALLATION)
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY)
         except OSError:
             pass
-    if supprimer_donnees:
-        shutil.rmtree(DOSSIER_DONNEES, ignore_errors=True)
-    dossier = chemins["dossier"]
-    if EST_WINDOWS:
+    if delete_data:
+        shutil.rmtree(DATA_FOLDER, ignore_errors=True)
+    folder = paths["folder"]
+    if IS_WINDOWS:
         # The program is running: its folder is deleted right after it closes.
         subprocess.Popen(
-            f'cmd /c ping 127.0.0.1 -n 4 > nul & rmdir /s /q "{dossier}"',
+            f'cmd /c ping 127.0.0.1 -n 4 > nul & rmdir /s /q "{folder}"',
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), cwd=str(Path.home()))
     else:
-        shutil.rmtree(dossier, ignore_errors=True)
-    texte = _("Pocket Book a été désinstallé.")
-    if not supprimer_donnees:
-        texte += "\n\n" + _("Vos fiches sont toujours dans :") + f"\n{DOSSIER_DONNEES}"
-    return texte
+        shutil.rmtree(folder, ignore_errors=True)
+    text_value = _("Pocket Book has been uninstalled.")
+    if not delete_data:
+        text_value += "\n\n" + _("Your cards are still in:") + f"\n{DATA_FOLDER}"
+    return text_value
 
 
-def _fenetre_simple(titre, parent=None):
+def _simple_window(title_text, parent=None):
     """Small, clear and readable window for the installation."""
-    appliquer_theme_couleurs("clair")
-    racine = tk.Toplevel(parent) if parent is not None else tk.Tk()
-    racine.title(titre)
-    racine.configure(bg=BLANC, padx=34, pady=28)
-    racine.resizable(False, False)
-    mettre_icone(racine)
-    famille = police_disponible(POLICES_TEXTE)
-    polices = {
-        "titre": tkfont.Font(family=famille, size=22, weight="bold"),
-        "base": tkfont.Font(family=famille, size=14),
-        "gras": tkfont.Font(family=famille, size=14, weight="bold"),
+    apply_theme_colors("light")
+    root = tk.Toplevel(parent) if parent is not None else tk.Tk()
+    root.title(title_text)
+    root.configure(bg=WHITE, padx=34, pady=28)
+    root.resizable(False, False)
+    set_icon(root)
+    family_name = available_font(TEXT_FONTS)
+    fonts = {
+        "title": tkfont.Font(family=family_name, size=22, weight="bold"),
+        "base": tkfont.Font(family=family_name, size=14),
+        "bold": tkfont.Font(family=family_name, size=14, weight="bold"),
     }
-    return racine, polices
+    return root, fonts
 
 
-def _gros_bouton(parent, texte, commande, polices, principal=False):
-    return tk.Button(parent, text=texte, command=commande, font=polices["gras"],
-                     bg=VERT if principal else BLANC, fg=SUR_ACCENT if principal else ENCRE,
-                     activebackground=VERT_FONCE if principal else BLEU_CLAIR,
-                     activeforeground=SUR_ACCENT if principal else ENCRE,
+def _big_button(parent, text_value, command, fonts, primary=False):
+    return tk.Button(parent, text=text_value, command=command, font=fonts["bold"],
+                     bg=GREEN if primary else WHITE, fg=ON_ACCENT if primary else INK,
+                     activebackground=GREEN_DARK if primary else BLUE_LIGHT,
+                     activeforeground=ON_ACCENT if primary else INK,
                      relief="solid", bd=1, padx=22, pady=10, cursor="hand2", highlightthickness=0)
 
 
-def _choix_langue_installation(zone, polices, rafraichir):
+def _install_language_choice(area, fonts, refresh):
     """Small row of languages at the top of the installation window."""
-    ligne = tk.Frame(zone, bg=BLANC)
-    ligne.pack(anchor="e", pady=(0, 10))
-    for code, nom in LANGUES.items():
-        actif = code == langue_actuelle()
-        tk.Button(ligne, text=nom, font=polices["base"] if not actif else polices["gras"],
-                  bg=BLEU if actif else BLANC, fg=SUR_ACCENT if actif else ENCRE,
-                  activebackground=BLEU_CLAIR, relief="solid", bd=1, padx=8, pady=2,
+    line = tk.Frame(area, bg=WHITE)
+    line.pack(anchor="e", pady=(0, 10))
+    for code, name in LANGUAGES.items():
+        active = code == current_language()
+        tk.Button(line, text=name, font=fonts["base"] if not active else fonts["bold"],
+                  bg=BLUE if active else WHITE, fg=ON_ACCENT if active else INK,
+                  activebackground=BLUE_LIGHT, relief="solid", bd=1, padx=8, pady=2,
                   cursor="hand2", highlightthickness=0,
-                  command=lambda c=code: (choisir_langue(c), rafraichir())).pack(side="left", padx=2)
+                  command=lambda c=code: (set_language(c), refresh())).pack(side="left", padx=2)
 
 
-def fenetre_installation():
+def install_window():
     """Launched from a download, a USB stick…: offer to install (or update)."""
     import subprocess
-    chemins = chemins_installation()
-    deja = deja_installe()
-    racine, polices = _fenetre_simple(_("Installation de Pocket Book"))
-    zone = tk.Frame(racine, bg=BLANC)
-    zone.pack(fill="both", expand=True)
-    var_bureau = tk.BooleanVar(value=option_bureau())
+    paths = install_paths()
+    already = already_installed()
+    root, fonts = _simple_window(_("Installing Pocket Book"))
+    area = tk.Frame(root, bg=WHITE)
+    area.pack(fill="both", expand=True)
+    desktop_var = tk.BooleanVar(value=desktop_option())
 
-    def vider():
-        for w in zone.winfo_children():
+    def clear():
+        for w in area.winfo_children():
             w.destroy()
 
-    def ecran_accueil():
-        vider()
-        racine.title(_("Installation de Pocket Book"))
-        _choix_langue_installation(zone, polices, ecran_accueil)
-        tk.Label(zone, text=_("Mettre à jour Pocket Book") if deja else _("Installer Pocket Book"),
-                 font=polices["titre"], bg=BLANC, fg=ENCRE).pack(anchor="w")
-        texte = (_("Une nouvelle version de Pocket Book va remplacer l'ancienne.\n"
-                   "Vos fiches ne sont pas touchées.") if deja else
-                 _("Pocket Book va être installé sur cet ordinateur.\n"
-                   "Il fonctionne sans internet : rien ne quitte l'ordinateur.\n"
-                   "Vos fiches seront rangées dans :") + f"\n{DOSSIER_DONNEES}")
-        tk.Label(zone, text=texte, font=polices["base"], bg=BLANC, fg=GRIS,
+    def welcome_screen():
+        clear()
+        root.title(_("Installing Pocket Book"))
+        _install_language_choice(area, fonts, welcome_screen)
+        tk.Label(area, text=_("Update Pocket Book") if already else _("Install Pocket Book"),
+                 font=fonts["title"], bg=WHITE, fg=INK).pack(anchor="w")
+        text_value = (_("A new version of Pocket Book will replace the old one.\nYour cards are not "
+                        "touched.") if already else
+                      _("Pocket Book will be installed on this computer.\nIt works without internet: "
+                        "nothing leaves the computer.\nYour cards will be kept in:") + f"\n{DATA_FOLDER}")
+        tk.Label(area, text=text_value, font=fonts["base"], bg=WHITE, fg=GREY,
                  justify="left").pack(anchor="w", pady=(10, 16))
-        tk.Checkbutton(zone, text=_("Mettre une icône « Pocket Book » sur le Bureau"),
-                       variable=var_bureau, font=polices["base"], bg=BLANC, fg=ENCRE,
-                       activebackground=BLANC, selectcolor=BLANC).pack(anchor="w", pady=(0, 20))
-        boutons = tk.Frame(zone, bg=BLANC)
-        boutons.pack(fill="x")
-        _gros_bouton(boutons, _("Annuler"), racine.destroy, polices).pack(side="right")
-        _gros_bouton(boutons, _("Mettre à jour") if deja else _("Installer"), lancer, polices,
-                     principal=True).pack(side="right", padx=(0, 12))
+        tk.Checkbutton(area, text=_("Put a “Pocket Book” icon on the Desktop"),
+                       variable=desktop_var, font=fonts["base"], bg=WHITE, fg=INK,
+                       activebackground=WHITE, selectcolor=WHITE).pack(anchor="w", pady=(0, 20))
+        buttons = tk.Frame(area, bg=WHITE)
+        buttons.pack(fill="x")
+        _big_button(buttons, _("Cancel"), root.destroy, fonts).pack(side="right")
+        _big_button(buttons, _("Update") if already else _("Install"), start_install, fonts,
+                    primary=True).pack(side="right", padx=(0, 12))
 
-    def lancer():
-        vider()
-        tk.Label(zone, text=_("Installation en cours…"), font=polices["titre"], bg=BLANC,
-                 fg=ENCRE).pack(anchor="w")
-        racine.update()
-        reussi, erreur = installer(Path(sys.executable), var_bureau.get())
-        vider()
-        if not reussi:
-            tk.Label(zone, text=_("L'installation n'a pas pu se faire"), font=polices["titre"],
-                     bg=BLANC, fg=ROUGE).pack(anchor="w")
-            tk.Label(zone, text=erreur, font=polices["base"], bg=BLANC, fg=ENCRE,
+    def start_install():
+        clear()
+        tk.Label(area, text=_("Installing…"), font=fonts["title"], bg=WHITE,
+                 fg=INK).pack(anchor="w")
+        root.update()
+        success, error = install(Path(sys.executable), desktop_var.get())
+        clear()
+        if not success:
+            tk.Label(area, text=_("The installation could not be completed"), font=fonts["title"],
+                     bg=WHITE, fg=RED).pack(anchor="w")
+            tk.Label(area, text=error, font=fonts["base"], bg=WHITE, fg=INK,
                      justify="left").pack(anchor="w", pady=(10, 20))
-            boutons = tk.Frame(zone, bg=BLANC)
-            boutons.pack(fill="x")
-            _gros_bouton(boutons, _("Fermer"), racine.destroy, polices).pack(side="right")
-            _gros_bouton(boutons, _("Réessayer"), ecran_accueil, polices).pack(side="right", padx=(0, 12))
+            buttons = tk.Frame(area, bg=WHITE)
+            buttons.pack(fill="x")
+            _big_button(buttons, _("Close"), root.destroy, fonts).pack(side="right")
+            _big_button(buttons, _("Try again"), welcome_screen, fonts).pack(side="right", padx=(0, 12))
             return
-        tk.Label(zone, text="✔  " + _("Pocket Book est installé"), font=polices["titre"], bg=BLANC,
-                 fg=VERT_TEXTE).pack(anchor="w")
-        if var_bureau.get():
-            ou = _("Pour l'ouvrir, double-cliquez sur l'icône « Pocket Book » du Bureau\n"
-                   "(ou cherchez « Pocket Book » dans le menu des applications).")
+        tk.Label(area, text="✔  " + _("Pocket Book is installed"), font=fonts["title"], bg=WHITE,
+                 fg=GREEN_TEXT).pack(anchor="w")
+        if desktop_var.get():
+            where = _("To open it, double-click the “Pocket Book” icon on the Desktop\n(or look for "
+                      "“Pocket Book” in the applications menu).")
         else:
-            ou = _("Pour l'ouvrir, cherchez « Pocket Book » dans le menu des applications.")
-        tk.Label(zone, text=ou + "\n\n" + _("Ce fichier d'installation peut maintenant être rangé ou supprimé."),
-                 font=polices["base"], bg=BLANC, fg=GRIS, justify="left").pack(anchor="w", pady=(10, 20))
-        boutons = tk.Frame(zone, bg=BLANC)
-        boutons.pack(fill="x")
+            where = _("To open it, look for “Pocket Book” in the applications menu.")
+        tk.Label(area, text=where + "\n\n" + _("This installation file can now be put away or deleted."),
+                 font=fonts["base"], bg=WHITE, fg=GREY, justify="left").pack(anchor="w", pady=(10, 20))
+        buttons = tk.Frame(area, bg=WHITE)
+        buttons.pack(fill="x")
 
-        def ouvrir():
-            subprocess.Popen([str(chemins["exe"]), "--langue", langue_actuelle()],
-                             cwd=str(chemins["exe"].parent))
-            racine.destroy()
+        def open_row():
+            subprocess.Popen([str(paths["exe"]), "--language", current_language()],
+                             cwd=str(paths["exe"].parent))
+            root.destroy()
 
-        _gros_bouton(boutons, _("Fermer"), racine.destroy, polices).pack(side="right")
-        _gros_bouton(boutons, _("Ouvrir Pocket Book"), ouvrir, polices,
-                     principal=True).pack(side="right", padx=(0, 12))
+        _big_button(buttons, _("Close"), root.destroy, fonts).pack(side="right")
+        _big_button(buttons, _("Open Pocket Book"), open_row, fonts,
+                    primary=True).pack(side="right", padx=(0, 12))
 
-    ecran_accueil()
-    racine.mainloop()
+    welcome_screen()
+    root.mainloop()
 
 
-def fenetre_desinstallation(parent=None):
+def uninstall_window(parent=None):
     """Windows: Settings > Apps > Uninstall. Linux: button in the Settings.
 
     Returns True if the program was uninstalled.
     """
-    racine, polices = _fenetre_simple(_("Désinstaller Pocket Book"), parent)
-    resultat = {"fait": False}
-    tk.Label(racine, text=_("Désinstaller Pocket Book ?"), font=polices["titre"], bg=BLANC,
-             fg=ENCRE).pack(anchor="w")
-    tk.Label(racine, text=_("Le programme et ses icônes vont être retirés de cet ordinateur.\n"
-                            "Vos fiches sont gardées, dans :") + f"\n{DOSSIER_DONNEES}",
-             font=polices["base"], bg=BLANC, fg=GRIS, justify="left").pack(anchor="w", pady=(10, 14))
-    var_donnees = tk.BooleanVar(value=False)
-    tk.Checkbutton(racine, text=_("Supprimer aussi toutes mes fiches et leurs sauvegardes"),
-                   variable=var_donnees, font=polices["base"], bg=BLANC, fg=ROUGE,
-                   activebackground=BLANC, selectcolor=BLANC).pack(anchor="w", pady=(0, 20))
+    root, fonts = _simple_window(_("Uninstall Pocket Book"), parent)
+    result = {"done": False}
+    tk.Label(root, text=_("Uninstall Pocket Book?"), font=fonts["title"], bg=WHITE,
+             fg=INK).pack(anchor="w")
+    tk.Label(root, text=_("The program and its icons will be removed from this computer.\nYour "
+                          "cards are kept, in:") + f"\n{DATA_FOLDER}",
+             font=fonts["base"], bg=WHITE, fg=GREY, justify="left").pack(anchor="w", pady=(10, 14))
+    data_var = tk.BooleanVar(value=False)
+    tk.Checkbutton(root, text=_("Also delete all my cards and their backups"),
+                   variable=data_var, font=fonts["base"], bg=WHITE, fg=RED,
+                   activebackground=WHITE, selectcolor=WHITE).pack(anchor="w", pady=(0, 20))
 
-    def confirmer():
-        if var_donnees.get() and not messagebox.askyesno(
-                _("Supprimer les fiches ?"),
-                _("Toutes les fiches, les sauvegardes et les copies .txt de ce dossier seront "
-                  "effacées définitivement :") + f"\n{DOSSIER_DONNEES}\n\n" + _("Continuer ?"),
-                icon="warning", default="no", parent=racine):
+    def confirm():
+        if data_var.get() and not messagebox.askyesno(
+                _("Delete the cards?"),
+                _("All cards, backups and .txt copies in this folder will be permanently erased:") + f"\n{DATA_FOLDER}\n\n" + _("Continue?"),
+                icon="warning", default="no", parent=root):
             return
-        texte = retirer_installation(var_donnees.get())
-        messagebox.showinfo(NOM_APPLI, texte, parent=racine)
-        resultat["fait"] = True
-        racine.destroy()
+        text_value = remove_installation(data_var.get())
+        messagebox.showinfo(APP_NAME, text_value, parent=root)
+        result["done"] = True
+        root.destroy()
 
-    boutons = tk.Frame(racine, bg=BLANC)
-    boutons.pack(fill="x")
-    _gros_bouton(boutons, _("Annuler"), racine.destroy, polices).pack(side="right")
-    tk.Button(boutons, text=_("Désinstaller"), command=confirmer, font=polices["gras"], bg=ROUGE,
-              fg=SUR_ACCENT, activebackground="#7E2617", activeforeground=SUR_ACCENT,
+    buttons = tk.Frame(root, bg=WHITE)
+    buttons.pack(fill="x")
+    _big_button(buttons, _("Cancel"), root.destroy, fonts).pack(side="right")
+    tk.Button(buttons, text=_("Uninstall"), command=confirm, font=fonts["bold"], bg=RED,
+              fg=ON_ACCENT, activebackground="#7E2617", activeforeground=ON_ACCENT,
               relief="solid", bd=1, padx=22, pady=10, cursor="hand2",
               highlightthickness=0).pack(side="right", padx=(0, 12))
     if parent is None:
-        racine.mainloop()
+        root.mainloop()
     else:
-        racine.transient(parent)
-        racine.grab_set()
-        parent.wait_window(racine)
-    return resultat["fait"]
+        root.transient(parent)
+        root.grab_set()
+        parent.wait_window(root)
+    return result["done"]
 
 
-def installer_si_besoin():
+def install_if_needed():
     """Return True if the program must stop here (installation or uninstallation)."""
-    if not installation_possible():
+    if not can_install():
         return False
-    if "--desinstaller" in sys.argv:
-        fenetre_desinstallation()
+    if "--uninstall" in sys.argv or "--desinstaller" in sys.argv:   # old flag: installs before 1.1
+        uninstall_window()
         return True
-    chemins = chemins_installation()
-    if not meme_fichier(sys.executable, chemins["exe"]):
-        fenetre_installation()
+    paths = install_paths()
+    if not same_file(sys.executable, paths["exe"]):
+        install_window()
         return True
     # Launched from the installed copy: repair whatever is missing.
-    if EST_WINDOWS and lire_registre("DisplayName") is None:
+    if IS_WINDOWS and read_registry("DisplayName") is None:
         try:
-            inscrire_dans_windows(chemins["exe"], True)
+            register_in_windows(paths["exe"], True)
         except Exception:
             pass
-    if option_bureau() and not chemins["bureau"].exists():
+    if desktop_option() and not paths["desktop"].exists():
         try:
-            creer_raccourci(chemins["bureau"], chemins["exe"])
+            create_shortcut(paths["desktop"], paths["exe"])
         except Exception:
             pass
     return False
 
 
 def main():
-    if "--langue" in sys.argv:  # language chosen in the installation window
-        i = sys.argv.index("--langue")
+    if "--language" in sys.argv:  # language chosen in the installation window
+        i = sys.argv.index("--language")
         if i + 1 < len(sys.argv):
-            choisir_langue(sys.argv[i + 1])
-            LANGUE_IMPOSEE[0] = sys.argv[i + 1]
+            set_language(sys.argv[i + 1])
+            FORCED_LANGUAGE[0] = sys.argv[i + 1]
     else:
-        choisir_langue(langue_du_systeme())
-    if EST_WINDOWS:
+        set_language(system_language())
+    if IS_WINDOWS:
         try:  # sharp text on high-DPI screens
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except Exception:
             pass
-    if installer_si_besoin():
+    if install_if_needed():
         return
-    migrer_ancien_dossier()
-    DOSSIER_DONNEES.mkdir(parents=True, exist_ok=True)
-    racine = tk.Tk()
-    Application(racine)
-    racine.mainloop()
+    migrate_old_folder()
+    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+    root = tk.Tk()
+    Application(root)
+    root.mainloop()
 
 
 if __name__ == "__main__":

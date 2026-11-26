@@ -1,5 +1,5 @@
 @echo off
-title Fabrication de Pocket Book / Building Pocket Book
+title Building Pocket Book
 cd /d "%~dp0\.."
 
 rem Builds the Windows installer on THIS PC (Python 3.10+ required).
@@ -14,23 +14,23 @@ if not errorlevel 1 goto python_ok
 where uv >nul 2>nul
 if not errorlevel 1 goto python_ok
 echo.
-echo Python est introuvable. / Python not found.
-echo Ce script sert a FABRIQUER le programme. Pour simplement l'installer,
-echo telechargez PocketBook-Setup-Windows.exe dans les Releases GitHub.
+echo Python not found.
+echo This script BUILDS the program. To simply install it,
+echo download PocketBook-Setup-Windows.exe from GitHub Releases.
 pause
 exit /b 1
 :python_ok
 
 set VPY=.venv\Scripts\python.exe
 if exist "%VPY%" goto venv_ok
-echo [1/3] Environnement Python dedie / Build environment...
+echo [1/3] Build environment...
 where uv >nul 2>nul && uv venv --seed .venv
 if not exist "%VPY%" %PY% -m venv .venv
-if not exist "%VPY%" ( echo Echec .venv & pause & exit /b 1 )
+if not exist "%VPY%" ( echo Could not create .venv & pause & exit /b 1 )
 :venv_ok
 
 "%VPY%" -c "import tkinter" 2>nul
-if errorlevel 1 ( echo Tkinter manque : installez Python depuis python.org & pause & exit /b 1 )
+if errorlevel 1 ( echo Tkinter is missing: install Python from python.org & pause & exit /b 1 )
 
 echo [2/3] PyInstaller...
 "%VPY%" -m pip install --upgrade pyinstaller
@@ -38,15 +38,15 @@ echo [2/3] PyInstaller...
 if not errorlevel 1 goto build
 where uv >nul 2>nul && uv pip install --python "%VPY%" --upgrade pyinstaller
 "%VPY%" -m PyInstaller --version >nul 2>nul
-if errorlevel 1 ( echo Echec PyInstaller & pause & exit /b 1 )
+if errorlevel 1 ( echo PyInstaller could not be installed & pause & exit /b 1 )
 
 :build
-echo [3/3] Fabrication / Building...
+echo [3/3] Building...
 "%VPY%" -m PyInstaller --noconfirm --clean --onefile --windowed --name "Pocket Book" --icon assets\pocketbook.ico --add-data "assets\pocketbook.ico;." --add-data "assets\pocketbook.png;." pocket_book.py
-if errorlevel 1 ( echo Echec de la fabrication & pause & exit /b 1 )
+if errorlevel 1 ( echo The build failed & pause & exit /b 1 )
 if not exist release mkdir release
 copy /y "dist\Pocket Book.exe" "release\PocketBook-Setup-Windows.exe" >nul
 echo.
-echo Termine / Done : release\PocketBook-Setup-Windows.exe
+echo Done: release\PocketBook-Setup-Windows.exe
 explorer release
 pause

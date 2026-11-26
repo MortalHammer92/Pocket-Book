@@ -115,7 +115,7 @@ Everything lives in your **Documents/Pocket Book** folder:
 | `pocketbook.json` | your cards and settings |
 | `backups/` | one automatic copy per day (30 kept) + one before each import |
 | `Cards as text/` | the readable `.txt` copy of every card (name depends on your language) |
-| `index_documents.json` | a cache of the documents already read (safe to delete) |
+| `documents_index.json` | a cache of the documents already read (safe to delete) |
 
 To move to another computer, copy this folder.
 
@@ -145,17 +145,17 @@ Run the tests: `python -m pip install pytest && python -m pytest`
 
 ```
 pocket_book.py                 the whole application (logic + Tkinter interface + installer)
-langues.py                     translations (EN, ES, DE, IT) and word lists for passwords
+translations.py                translations (FR, ES, DE, IT) and word lists for passwords
 assets/                        icons
 tests/                         pytest suite (recognition, saving, .txt copies, translations…)
-scripts/verifier_traductions.py   reports missing or broken translations
+scripts/check_translations.py  reports missing or broken translations
 scripts/build_windows.bat, build.sh   local builds
 .github/workflows/             tests on 3 systems + release builds
 ```
 
-Identifiers are in French, comments and docstrings in English; the interface is translated.
-Adding a language means adding one dictionary in `langues.py` —
-`python scripts/verifier_traductions.py` lists what is missing.
+The code is written in English; the interface is translated into French, Spanish, German
+and Italian. Adding a language means adding one dictionary in `translations.py` —
+`python scripts/check_translations.py` lists what is missing.
 
 ## FAQ
 
