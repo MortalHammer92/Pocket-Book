@@ -29,6 +29,8 @@ desktop.ini
 pocketbook.json
 pocketbook_*.json
 carnet.json
+carnet_*.json
+sauvegardes/
 documents_index.json
 index_documents.json
 backups/
