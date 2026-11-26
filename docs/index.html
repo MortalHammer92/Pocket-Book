@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pocket Book — a simple offline password manager and address book</title>
+<meta name="description" content="Free, offline password manager and address book for Windows, macOS and Linux. Large text, big buttons, no account, no cloud. Made for seniors and beginners.">
+<link rel="canonical" href="https://mortalhammer92.github.io/Pocket-Book/">
+<link rel="icon" href="icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pocket Book — passwords and contacts, in large print">
+<meta property="og:description" content="Free, offline password manager and address book for Windows, macOS and Linux. No account, no cloud.">
+<meta property="og:url" content="https://mortalhammer92.github.io/Pocket-Book/">
+<meta property="og:image" content="https://mortalhammer92.github.io/Pocket-Book/icon.png">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Pocket Book",
+  "description": "Free, offline password manager and address book with large text, made for seniors and beginners.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Windows 10, Windows 11, macOS, Linux",
+  "inLanguage": ["en", "fr", "es", "de", "it"],
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+  "license": "https://opensource.org/licenses/MIT",
+  "downloadUrl": "https://github.com/MortalHammer92/Pocket-Book/releases/latest",
+  "author": {"@type": "Person", "name": "Louis", "url": "https://github.com/MortalHammer92"}
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  /* Palette: the app's own colours (index blue, category sky, note yellow) on a cool paper white. */
+  :root {
+    --paper: #FBFCFE;
+    --ink: #13223F;
+    --ink-soft: #46546E;
+    --blue: #1E4F91;
+    --blue-deep: #163B6D;
+    --sky: #D6E6FA;
+    --rule: #D5DDE8;
+    --note: #FFF0B8;
+    --note-edge: #E0B867;
+    --muted-letter: #A9B4C6;
+    --tab-width: 2.6rem;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Atkinson Hyperlegible", Verdana, "DejaVu Sans", sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+  a { color: var(--blue); text-underline-offset: 0.18em; }
+  a:hover { color: var(--blue-deep); }
+  :focus-visible { outline: 3px solid #E08A1E; outline-offset: 3px; border-radius: 4px; }
+
+  /* The signature: a thumb index, like the A–Z tabs of a paper address book.
+     Letters that open a section are live; the others are greyed, as in the app. */
+  .index {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: var(--tab-width);
+    display: flex; flex-direction: column;
+    background: var(--sky);
+    border-left: 1px solid var(--rule);
+    z-index: 10;
+  }
+  .index a, .index span {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.82rem;
+    text-decoration: none;
+    min-height: 0;
+  }
+  .index span { color: var(--muted-letter); }
+  .index a { color: var(--blue); }
+  .index a:hover, .index a[aria-current="true"] { background: var(--blue); color: #fff; }
+
+  .page {
+    max-width: 66rem;
+    margin: 0 auto;
+    padding: 0 calc(var(--tab-width) + 2rem) 0 2rem;
+  }
+
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.4rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .brand { display: flex; align-items: center; gap: 0.7rem; font-weight: 700; font-size: 1.25rem; color: var(--ink); text-decoration: none; }
+  .brand img { width: 2.4rem; height: 2.4rem; }
+  .top nav a { margin-left: 1.4rem; font-size: 1rem; }
+
+  /* Hero */
+  /* Hero: the promise first, then the app itself, wide enough to read. */
+  .hero { padding: 4.5rem 0 4rem; }
+  .hero-text { max-width: 44rem; }
+  .hero figure.shot { margin-top: 3.5rem; }
+  h1 {
+    font-size: clamp(2.4rem, 5.2vw, 3.9rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin: 0 0 1.4rem;
+  }
+  .lede { font-size: 1.3rem; color: var(--ink-soft); margin: 0 0 2rem; max-width: 34rem; }
+  .get { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; }
+  .button {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    padding: 0.95rem 1.5rem;
+    border-radius: 10px;
+    background: var(--blue); color: #fff;
+    font-weight: 700; font-size: 1.15rem;
+    text-decoration: none;
+    border: 2px solid var(--blue);
+  }
+  .button:hover { background: var(--blue-deep); border-color: var(--blue-deep); color: #fff; }
+  .button.quiet { background: transparent; color: var(--blue); }
+  .button.quiet:hover { background: var(--sky); color: var(--blue-deep); }
+  .small-print { font-size: 0.95rem; color: var(--ink-soft); margin-top: 1rem; }
+
+  figure.shot { margin: 0; }
+  figure.shot img {
+    display: block; width: 100%; height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    box-shadow: 0 18px 40px -18px rgba(19, 34, 63, 0.35);
+  }
+  figure.shot figcaption { font-size: 0.95rem; color: var(--ink-soft); margin-top: 0.7rem; }
+
+  /* Sections open with their index letter, like a page of the address book. */
+  section.chapter {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 1.5rem;
+    padding: 3.5rem 0;
+    border-top: 1px solid var(--rule);
+    scroll-margin-top: 1rem;
+  }
+  .letter {
+    font-size: 3.6rem; font-weight: 700; line-height: 1;
+    color: var(--sky);
+    -webkit-text-stroke: 2px var(--blue);
+  }
+  h2 { font-size: 2rem; line-height: 1.2; margin: 0 0 1.2rem; }
+  h3 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+  .chapter p, .chapter li { max-width: 40rem; }
+  ul.plain { padding-left: 1.2rem; margin: 0; }
+  ul.plain li { margin-bottom: 0.7rem; }
+
+  .downloads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; max-width: 40rem; }
+  .downloads a {
+    display: block; padding: 1.1rem 1.2rem;
+    border: 2px solid var(--rule); border-radius: 10px;
+    text-decoration: none; color: var(--ink);
+    background: #fff;
+  }
+  .downloads a:hover { border-color: var(--blue); }
+  .downloads a.yours { border-color: var(--blue); background: var(--sky); }
+  .downloads strong { display: block; font-size: 1.2rem; color: var(--blue); }
+  .downloads span { font-size: 0.95rem; color: var(--ink-soft); }
+
+  ol.steps { padding-left: 1.4rem; margin: 0.3rem 0 0; max-width: 40rem; }
+  ol.steps li { margin-bottom: 0.4rem; }
+
+  .note {
+    background: var(--note);
+    border-left: 5px solid var(--note-edge);
+    padding: 1rem 1.3rem;
+    border-radius: 0 10px 10px 0;
+    max-width: 40rem;
+    margin-top: 1.6rem;
+  }
+
+  dl.faq { margin: 0; max-width: 40rem; }
+  dl.faq dt { font-weight: 700; margin-top: 1.3rem; }
+  dl.faq dt:first-child { margin-top: 0; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 2rem 0 3rem;
+    font-size: 0.98rem; color: var(--ink-soft);
+    display: flex; flex-wrap: wrap; gap: 0.6rem 2rem; justify-content: space-between;
+  }
+
+  /* On small screens the index becomes a horizontal letter bar, like in the app. */
+  @media (max-width: 700px) {
+    .index {
+      top: auto; left: 0; width: auto; height: 2.8rem;
+      flex-direction: row; overflow-x: auto;
+      border-left: 0; border-top: 1px solid var(--rule);
+    }
+    .index a, .index span { flex: 0 0 auto; width: 1.9rem; font-size: 0.85rem; }
+    .page { padding: 0 1.2rem 3.5rem; }
+    .top nav a:not(:last-child) { display: none; }
+    section.chapter { grid-template-columns: minmax(0, 1fr); gap: 0.4rem; }
+    .letter { font-size: 2.6rem; }
+    .downloads { grid-template-columns: minmax(0, 1fr); }
+    .hero { padding-top: 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="index" aria-label="Sections, A to Z" id="index"></nav>
+
+<div class="page">
+  <header class="top">
+    <a class="brand" href="#"><img src="icon.png" alt="" width="40" height="40">Pocket Book</a>
+    <nav aria-label="Links">
+      <a href="https://github.com/MortalHammer92/Pocket-Book/blob/main/README.fr.md" lang="fr">En français</a>
+      <a href="https://github.com/MortalHammer92/Pocket-Book">Source code</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero" id="hero">
+      <div class="hero-text">
+        <h1>Passwords and contacts, in large print.</h1>
+        <p class="lede">A simple address book for your passwords and the people you call.
+          It works without internet, without an account and without a master password to forget.</p>
+        <div class="get">
+          <a class="button" id="main-download" href="https://github.com/MortalHammer92/Pocket-Book/releases/latest">Download Pocket Book</a>
+          <a class="button quiet" href="#download">Other systems</a>
+        </div>
+        <p class="small-print">Free and open source. Windows, macOS and Linux.
+          In English, French, Spanish, German and Italian.</p>
+      </div>
+      <figure class="shot" data-shot>
+        <img src="screenshots/main.png" alt="The Pocket Book window: a list of password cards on the left, the selected card in large print on the right, and the A to Z letter bar at the top." width="1200" height="800">
+        <figcaption>Each card in large print, with a copy button next to every field.</figcaption>
+      </figure>
+    </div>
+
+    <section class="chapter" id="download" data-letter="D" aria-labelledby="h-download">
+      <div class="letter" aria-hidden="true">D</div>
+      <div>
+        <h2 id="h-download">Download</h2>
+        <p>Pick your computer. The file downloads directly; Python and everything else are included.</p>
+        <div class="downloads">
+          <a data-os="windows" href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Setup-Windows.exe">
+            <strong>Windows</strong><span>Windows 10 and 11, 64-bit</span></a>
+          <a data-os="mac" href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-AppleSilicon.zip">
+            <strong>Mac with Apple chip</strong><span>M1, M2, M3, M4 and later</span></a>
+          <a data-os="mac" href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-macOS-Intel.zip">
+            <strong>Mac with Intel chip</strong><span>Macs from before 2021</span></a>
+          <a data-os="linux" href="https://github.com/MortalHammer92/Pocket-Book/releases/latest/download/PocketBook-Linux.tar.gz">
+            <strong>Linux</strong><span>Ubuntu 22.04+, Debian 12+, Fedora 36+</span></a>
+        </div>
+        <p class="small-print">Not sure which Mac you have? Open the Apple menu, then
+          <em>About This Mac</em>: it says “Chip Apple” or “Processor Intel”.
+          All versions are on the <a href="https://github.com/MortalHammer92/Pocket-Book/releases">releases page</a>.</p>
+      </div>
+    </section>
+
+    <section class="chapter" id="features" data-letter="F" aria-labelledby="h-features">
+      <div class="letter" aria-hidden="true">F</div>
+      <div>
+        <h2 id="h-features">Features</h2>
+        <ul class="plain">
+          <li><strong>Password cards</strong> with the website, username, email and password. The password is locked so it cannot be erased by mistake.</li>
+          <li><strong>Contact cards</strong> with mobile, landline, email, postal address and birthday.</li>
+          <li><strong>A password generator</strong> that makes passwords from easy words in your language, or very strong ones.</li>
+          <li><strong>Your old Word and text files</strong> become tidy cards. Drag them onto the window: Pocket Book puts each piece of information in the right field and never changes the original files.</li>
+          <li><strong>Saved automatically</strong>, with a backup every day and a readable <code>.txt</code> copy of every card.</li>
+          <li><strong>Easy on the eyes</strong>: four text sizes, four colour themes including high contrast, an A to Z letter bar and search.</li>
+        </ul>
+        <figure class="shot" data-shot style="margin-top:2rem; max-width:40rem">
+          <img src="screenshots/import.png" alt="The documents page of Pocket Book, showing imported files sorted into passwords and contacts." width="1200" height="800">
+          <figcaption>Old documents, sorted into password and contact cards.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="chapter" id="install" data-letter="I" aria-labelledby="h-install">
+      <div class="letter" aria-hidden="true">I</div>
+      <div>
+        <h2 id="h-install">Install</h2>
+        <h3>Windows</h3>
+        <ol class="steps">
+          <li>Double-click <code>PocketBook-Setup-Windows.exe</code>.</li>
+          <li>If Windows says “Windows protected your PC”, click <em>More info</em>, then <em>Run anyway</em>.</li>
+          <li>Click <em>Install</em>. An icon appears on the Desktop and in the Start menu.</li>
+        </ol>
+        <h3>Mac</h3>
+        <ol class="steps">
+          <li>Open the downloaded <code>.zip</code> file.</li>
+          <li>Drag <em>Pocket Book</em> into <em>Applications</em>.</li>
+          <li>The first time, if the Mac refuses to open it: go to <em>System Settings</em>, <em>Privacy &amp; Security</em>, and click <em>Open Anyway</em>.</li>
+        </ol>
+        <h3>Linux</h3>
+        <ol class="steps">
+          <li>Extract <code>PocketBook-Linux.tar.gz</code>.</li>
+          <li>Double-click <code>pocket-book</code>, then click <em>Install</em>. It is added to your applications menu.</li>
+        </ol>
+        <p class="small-print">These warnings appear because the app is free and not signed with a paid certificate.</p>
+      </div>
+    </section>
+
+    <section class="chapter" id="privacy" data-letter="P" aria-labelledby="h-privacy">
+      <div class="letter" aria-hidden="true">P</div>
+      <div>
+        <h2 id="h-privacy">Privacy</h2>
+        <p>Pocket Book never connects to the internet by itself. There is no account, no cloud and no tracking:
+          your cards stay in the <em>Documents/Pocket Book</em> folder of your computer.
+          To move to another computer, copy that folder.</p>
+        <div class="note">
+          <strong>Pocket Book is not an encrypted vault.</strong>
+          Anyone who can open your user account can read your cards. It replaces “passwords in Word
+          documents”, not a vault like Bitwarden or KeePass. Protect your computer with a session password.
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter" id="questions" data-letter="Q" aria-labelledby="h-questions">
+      <div class="letter" aria-hidden="true">Q</div>
+      <div>
+        <h2 id="h-questions">Questions</h2>
+        <dl class="faq">
+          <dt>Is it free?</dt>
+          <dd>Yes. Pocket Book is free and open source, under the MIT licence.</dd>
+          <dt>Who is it for?</dt>
+          <dd>People who are not at ease with computers, and the family members who set up their computer.
+            It was first made for an 80-year-old grandmother and her 1,500 Word documents.</dd>
+          <dt>Can it read my old <code>.doc</code> files?</dt>
+          <dd>It reads <code>.docx</code> and <code>.txt</code>. Open old <code>.doc</code> files in Word and save them as <code>.docx</code> first.</dd>
+          <dt>How do I uninstall it?</dt>
+          <dd>Windows: <em>Settings</em>, <em>Apps</em>, <em>Pocket Book</em>, <em>Uninstall</em>.
+            Mac: drag the app to the Bin. Linux: <em>Settings</em> inside the app. Your cards are kept unless you choose to delete them.</dd>
+        </dl>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Made by Louis (<a href="https://github.com/MortalHammer92">@MortalHammer92</a>). MIT licence.</span>
+    <span><a href="https://github.com/MortalHammer92/Pocket-Book">Source code on GitHub</a></span>
+  </footer>
+</div>
+
+<script>
+  // Thumb index: every letter of the alphabet, live only where a section starts with it.
+  (function () {
+    var index = document.getElementById("index");
+    var sections = {};
+    document.querySelectorAll("[data-letter]").forEach(function (s) { sections[s.dataset.letter] = s; });
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(function (letter) {
+      var el;
+      if (sections[letter]) {
+        el = document.createElement("a");
+        el.href = "#" + sections[letter].id;
+        el.setAttribute("aria-label", sections[letter].querySelector("h2").textContent);
+      } else {
+        el = document.createElement("span");
+        el.setAttribute("aria-hidden", "true");
+      }
+      el.textContent = letter;
+      index.appendChild(el);
+    });
+    // Highlight the tab of the section being read.
+    if ("IntersectionObserver" in window) {
+      var tabs = index.querySelectorAll("a");
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          tabs.forEach(function (t) {
+            t.setAttribute("aria-current", t.getAttribute("href") === "#" + e.target.id ? "true" : "false");
+          });
+        });
+      }, { rootMargin: "-40% 0px -55% 0px" });
+      Object.keys(sections).forEach(function (k) { observer.observe(sections[k]); });
+    }
+  })();
+
+  // Screenshots: a picture that is not there yet is simply left out.
+  document.querySelectorAll("[data-shot] img").forEach(function (img) {
+    function drop() {
+      var fig = img.closest("[data-shot]");
+      fig.remove();
+    }
+    if (img.complete && img.naturalWidth === 0) drop(); else img.addEventListener("error", drop);
+  });
+
+  // Main button: the right file for this computer.
+  (function () {
+    var p = ((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent).toLowerCase();
+    var os = p.indexOf("win") > -1 ? "windows" : p.indexOf("mac") > -1 ? "mac" : p.indexOf("linux") > -1 && p.indexOf("android") < 0 ? "linux" : "";
+    var links = document.querySelectorAll('.downloads a[data-os="' + os + '"]');
+    links.forEach(function (a) { a.classList.add("yours"); });
+    var main = document.getElementById("main-download");
+    if (os === "windows" || os === "linux") {
+      main.href = links[0].href;
+      main.textContent = "Download for " + (os === "windows" ? "Windows" : "Linux");
+    } else if (os === "mac") {
+      main.href = "#download";
+      main.textContent = "Download for Mac";
+    }
+  })();
+</script>
+</body>
+</html>
