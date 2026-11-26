@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Traductions de l'interface de Pocket Book / Interface translations.
-
-Le programme est écrit en français : chaque dictionnaire associe une phrase française
-à sa traduction. Une phrase absente reste en français (rien ne casse).
-Les {mots} entre accolades sont remplacés par des valeurs : à garder tels quels.
-
-Ajouter une langue : ajouter son nom dans LANGUES, un dictionnaire dans TRADUCTIONS
-et une liste de mots simples dans MOTS_FACILES (pour les mots de passe « faciles à lire »).
-`python scripts/verifier_traductions.py` signale les phrases manquantes.
+"""Pocket Book interface translations.
 
 The program is written in French: each dictionary maps a French sentence to its
-translation. Missing sentences simply stay in French. Keep {placeholders} as they are.
+translation. A missing sentence simply stays in French (nothing breaks).
+The {words} in braces are replaced by values: keep them as they are.
+
+To add a language: add its name to LANGUES, a dictionary to TRADUCTIONS
+and a list of simple words to MOTS_FACILES (for "easy to read" passwords).
+`python scripts/verifier_traductions.py` reports missing sentences.
 """
 
 LANGUES = {
@@ -21,7 +18,7 @@ LANGUES = {
     "it": "Italiano",
 }
 
-# Mots simples (sans accents, faciles à taper) pour les mots de passe « faciles à lire »
+# Simple words (no accents, easy to type) for "easy to read" passwords
 MOTS_FACILES = {
     "en": """
 acorn anchor apple arrow autumn badger bakery balloon bamboo banana barn basket

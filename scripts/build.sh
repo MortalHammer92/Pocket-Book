@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Fabrique Pocket Book sur macOS ou Linux (il faut Python 3.10+ avec Tkinter).
 # Builds Pocket Book on macOS or Linux (Python 3.10+ with Tkinter required).
-# Le plus simple reste de télécharger la version prête dans les Releases GitHub.
+# The easiest way is still to download the ready-made version from GitHub Releases.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

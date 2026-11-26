@@ -2,9 +2,8 @@
 title Fabrication de Pocket Book / Building Pocket Book
 cd /d "%~dp0\.."
 
-rem Fabrique « PocketBook-Setup-Windows.exe » sur CE PC (il faut Python 3.10+).
 rem Builds the Windows installer on THIS PC (Python 3.10+ required).
-rem Le plus simple reste de télécharger la version déjà prête dans les Releases GitHub.
+rem The easiest way is still to download the ready-made version from GitHub Releases.
 
 set PY=py
 py -c "import sys" >nul 2>nul

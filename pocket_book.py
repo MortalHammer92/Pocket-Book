@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Pocket Book — un gestionnaire très simple de mots de passe et de contacts,
-qui fonctionne sans internet, pensé pour les personnes peu à l'aise avec l'ordinateur.
-Pocket Book — a very simple, offline password and contact keeper.
+Pocket Book — a very simple, offline password and contact keeper,
+designed for people who are not at ease with computers.
 
-- Fiches de mots de passe et de contacts, enregistrées automatiquement.
-- Générateur de mots de passe (faciles à lire ou très solides).
-- Lecture des anciens documents (.docx et .txt) SANS JAMAIS LES MODIFIER :
-  chaque document reconnu devient une fiche, mise à jour s'il change.
-- Copie .txt de chaque fiche, tri de A à Z, catégories, thèmes, taille du texte.
-- Interface en français, anglais, espagnol, allemand et italien (langues.py).
-- Windows, macOS et Linux. Uniquement la bibliothèque standard de Python.
+- Password and contact cards, saved automatically.
+- Password generator (easy to read or very strong).
+- Reads old documents (.docx and .txt) WITHOUT EVER CHANGING THEM:
+  each recognized document becomes a card, updated when it changes.
+- .txt copy of each card, A to Z sorting, categories, themes, text size.
+- Interface in French, English, Spanish, German and Italian (langues.py).
+- Windows, macOS and Linux. Python standard library only.
 
-Les données sont rangées dans « Documents/Pocket Book » :
-    pocketbook.json        les fiches et les réglages (non chiffré : voir README)
-    index_documents.json   la mémoire de lecture des documents (peut être supprimée)
-    backups/               une copie automatique par jour (30 gardées)
+Data is stored in "Documents/Pocket Book":
+    pocketbook.json        cards and settings (not encrypted: see README)
+    index_documents.json   document reading cache (can be deleted)
+    backups/               one automatic copy per day (30 kept)
 """
 
 import json
@@ -36,19 +35,19 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 # ---------------------------------------------------------------------------
-# Emplacements
+# Locations
 # ---------------------------------------------------------------------------
 
 from langues import LANGUES, TRADUCTIONS, MOTS_FACILES as MOTS_PAR_LANGUE  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Langue de l'interface
+# Interface language
 # ---------------------------------------------------------------------------
-# Le texte du programme est écrit en français ; _("texte") renvoie sa traduction
-# dans la langue choisie (langues.py). Pour ajouter une langue : voir langues.py.
+# The program's text is written in French; _("text") returns its translation
+# in the chosen language (langues.py). To add a language: see langues.py.
 
 _LANGUE = ["fr"]
-LANGUE_IMPOSEE = [None]   # langue passée par la fenêtre d'installation
+LANGUE_IMPOSEE = [None]   # language passed by the installation window
 
 
 def _(texte, **valeurs):
@@ -57,13 +56,13 @@ def _(texte, **valeurs):
 
 
 def n_(nombre, singulier, pluriel, **valeurs):
-    """Phrase au singulier ou au pluriel selon le nombre (en français, 0 et 1 au singulier)."""
+    """Singular or plural sentence depending on the number (in French, 0 and 1 are singular)."""
     un = nombre <= 1 if _LANGUE[0] == "fr" else nombre == 1
     return _(singulier if un else pluriel, n=nombre, **valeurs)
 
 
 def deux_points(libelle):
-    """« Libellé : » en français, « Label: » dans les autres langues."""
+    """"Libellé :" in French, "Label:" in the other languages."""
     return f"{libelle} :" if _LANGUE[0] == "fr" else f"{libelle}:"
 
 
@@ -77,7 +76,7 @@ def langue_actuelle():
 
 
 def langue_du_systeme():
-    """fr, en, es, de ou it selon le système ; anglais par défaut."""
+    """fr, en, es, de or it depending on the system; English by default."""
     codes = []
     if sys.platform.startswith("win"):
         try:
@@ -121,9 +120,9 @@ EST_LINUX = sys.platform.startswith("linux")
 
 
 def dossier_mes_documents():
-    """Le dossier « Documents » de l'utilisateur (Windows : même déplacé dans OneDrive)."""
+    """The user's "Documents" folder (Windows: even when moved to OneDrive)."""
     if EST_LINUX:
-        try:  # nom localisé du dossier (Documents, Dokumente, Documenti…)
+        try:  # localized folder name (Documents, Dokumente, Documenti…)
             import subprocess
             chemin = subprocess.run(["xdg-user-dir", "DOCUMENTS"], capture_output=True,
                                     text=True, timeout=5).stdout.strip()
@@ -144,13 +143,13 @@ def dossier_mes_documents():
 
 
 DOSSIER_DONNEES = dossier_mes_documents() / "Pocket Book"
-ANCIEN_DOSSIER_DONNEES = dossier_mes_documents() / "Mon carnet"   # nom des premières versions
+ANCIEN_DOSSIER_DONNEES = dossier_mes_documents() / "Mon carnet"   # name used by the first versions
 
 
 def migrer_ancien_dossier():
-    """Les premières versions s'appelaient « Mon carnet » : on reprend leurs fiches.
+    """The first versions were called "Mon carnet": their cards are carried over.
 
-    L'ancien dossier est copié (jamais supprimé) vers « Pocket Book ».
+    The old folder is copied (never deleted) to "Pocket Book".
     """
     ancien = ANCIEN_DOSSIER_DONNEES / "carnet.json"
     if DOSSIER_DONNEES.exists() or not ancien.exists():
@@ -163,7 +162,7 @@ def migrer_ancien_dossier():
             os.replace(anciennes, DOSSIER_DONNEES / "backups")
             for f in (DOSSIER_DONNEES / "backups").glob("carnet_*.json"):
                 os.replace(f, f.with_name(f.name.replace("carnet_", "pocketbook_", 1)))
-        # les réglages pointaient vers l'ancien dossier (copie .txt…)
+        # the settings pointed to the old folder (.txt copy…)
         chemin = DOSSIER_DONNEES / "pocketbook.json"
         donnees = json.loads(chemin.read_text(encoding="utf-8"))
         reglages = donnees.get("reglages", {})
@@ -177,7 +176,7 @@ def migrer_ancien_dossier():
 
 
 def ressource(nom):
-    """Fichier livré avec le programme (fonctionne aussi dans le .exe / l'app)."""
+    """File shipped with the program (also works inside the .exe / app)."""
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     for candidat in (os.path.join(base, nom), os.path.join(base, "assets", nom)):
         if os.path.exists(candidat):
@@ -186,7 +185,7 @@ def ressource(nom):
 
 
 def ouvrir_avec_systeme(chemin):
-    """Ouvre un fichier ou un dossier avec le programme habituel du système."""
+    """Open a file or folder with the system's usual program."""
     import subprocess
     if EST_WINDOWS:
         os.startfile(chemin)  # noqa: S606
@@ -197,7 +196,7 @@ def ouvrir_avec_systeme(chemin):
 
 
 def montrer_dans_dossier(chemin):
-    """Ouvre le dossier qui contient le fichier, le fichier sélectionné si possible."""
+    """Open the folder containing the file, with the file selected if possible."""
     import subprocess
     if EST_WINDOWS:
         subprocess.Popen(["explorer", "/select,", os.path.normpath(chemin)])
@@ -218,14 +217,14 @@ CHAMPS = {
 }
 
 def sans_categorie():
-    """Texte du choix « pas de catégorie » (la catégorie est facultative)."""
+    """Text for the "no category" choice (the category is optional)."""
     return _("(aucune)")
 
 
 def toutes_categories():
     return _("Toutes")
 
-# Champs des fiches : ordre d'affichage, et ceux qu'on peut ajouter / retirer
+# Card fields: display order, and the ones that can be added / removed
 ORDRE_CHAMPS = {
     "compte": ["categorie", "site", "identifiant", "email", "mdp", "notes"],
     "contact": ["categorie", "portable", "telephone", "email", "adresse", "anniversaire", "notes"],
@@ -241,7 +240,7 @@ LIBELLES_CHAMPS = {
     "adresse": "Adresse", "anniversaire": "Anniversaire",
 }
 
-# Couleurs des catégories : fonds pâles, texte toujours foncé (bien lisible)
+# Category colors: pale backgrounds, text always dark (easy to read)
 PALETTE_CATEGORIES = [
     ("Bleu", "#D6E6FA"), ("Vert", "#D6F0DC"), ("Jaune", "#FFF0B8"), ("Orange", "#FFDDC2"),
     ("Rouge", "#F8D3D3"), ("Violet", "#E6DAF5"), ("Rose", "#F8D6E8"),
@@ -257,19 +256,19 @@ CATEGORIES_DE_DEPART = [
 ]
 
 # ---------------------------------------------------------------------------
-# Outils de texte
+# Text helpers
 # ---------------------------------------------------------------------------
 
 
 def normaliser(texte):
-    """Minuscules sans accents, pour chercher « impot » et trouver « Impôts »."""
+    """Lowercase without accents, so "impot" finds "Impôts"."""
     texte = unicodedata.normalize("NFD", texte or "")
     texte = "".join(c for c in texte if unicodedata.category(c) != "Mn")
     return texte.casefold()
 
 
 def premiere_lettre(nom):
-    """Lettre de classement : A à Z, ou « # » pour un chiffre ou un signe."""
+    """Sorting letter: A to Z, or "#" for a digit or a symbol."""
     for c in normaliser(nom).upper():
         if c.isalpha() and "A" <= c <= "Z":
             return c
@@ -283,14 +282,14 @@ def cle_tri(nom):
 
 
 # ---------------------------------------------------------------------------
-# Lecture des documents (jamais d'écriture)
+# Reading documents (never writing)
 # ---------------------------------------------------------------------------
 
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
 def texte_docx(chemin):
-    """Texte d'un .docx, paragraphe par paragraphe (tableaux compris)."""
+    """Text of a .docx, paragraph by paragraph (tables included)."""
     with zipfile.ZipFile(chemin, "r") as z:
         xml = z.read("word/document.xml")
     racine = ElementTree.fromstring(xml)
@@ -312,7 +311,7 @@ def texte_docx(chemin):
             if enfant.tag == _W + "p":
                 lignes.append(texte_paragraphe(enfant))
             elif enfant.tag == _W + "tbl":
-                # Un tableau : une ligne par rangée, cellules séparées par une tabulation
+                # A table: one line per row, cells separated by a tab
                 for rangee in enfant.iter(_W + "tr"):
                     cellules = [" ".join(texte_paragraphe(p) for p in cellule.iter(_W + "p")).strip()
                                 for cellule in rangee.findall(_W + "tc")]
@@ -344,9 +343,9 @@ def lire_document(chemin):
 
 
 def lister_documents(dossier, exclure=()):
-    """Tous les .docx / .txt du dossier et de ses sous-dossiers.
+    """Every .docx / .txt in the folder and its subfolders.
 
-    Renvoie aussi le nombre d'anciens .doc (Word 97-2003), qui ne sont pas lus.
+    Also returns the number of old .doc files (Word 97-2003), which are not read.
     """
     resultats, anciens = [], 0
     for racine, sous_dossiers, fichiers in os.walk(dossier):
@@ -355,7 +354,7 @@ def lister_documents(dossier, exclure=()):
                             and os.path.normcase(os.path.abspath(os.path.join(racine, d))) not in exclus]
         for f in fichiers:
             if f.startswith("~$") or f.startswith("."):
-                continue  # fichiers temporaires de Word
+                continue  # Word temporary files
             if f.lower().endswith(EXTENSIONS_LUES):
                 resultats.append(os.path.join(racine, f))
             elif f.lower().endswith(".doc"):
@@ -364,10 +363,10 @@ def lister_documents(dossier, exclure=()):
 
 
 # ---------------------------------------------------------------------------
-# Deviner une fiche à partir d'un document
+# Guessing a card from a document
 # ---------------------------------------------------------------------------
 
-# Libellés reconnus dans les documents (français, anglais, espagnol, allemand, italien)
+# Labels recognized in documents (French, English, Spanish, German, Italian)
 _LIBELLES = {
     "mdp": ["mot de passe", "mdp", "password", "pass", "pwd", "code secret",
             "code", "mot passe", "passcode", "pin",
@@ -430,15 +429,15 @@ def deviner_categorie(nom):
         for mot in mots:
             if re.search(r"(^|[^a-z])" + re.escape(mot), n):
                 return _(categorie)
-    return ""  # rien de sûr : pas de catégorie plutôt qu'une mauvaise
+    return ""  # nothing certain: no category rather than a wrong one
 
 
 def deviner_fiche(nom, texte):
-    """Propose une fiche (dictionnaire) à partir du texte d'un document.
+    """Suggest a card (dictionary) from a document's text.
 
-    Formats reconnus, par exemple :
+    Recognized formats, for example:
         adresse@mail.fr            Identifiant : 12345      1234567890
-        (ligne vide)               MDP : xxxxx
+        (empty line)               MDP : xxxxx
         MotDePasse
     """
     fiche = {"identifiant": "", "email": "", "mdp": "", "site": ""}
@@ -457,7 +456,7 @@ def deviner_fiche(nom, texte):
                 continue
             champ_en_attente = None
 
-        # Un libellé seul (« Mot de passe ») : la valeur est sur la ligne suivante.
+        # A label on its own ("Mot de passe"): the value is on the next line.
         champ_seul = _quel_libelle(ligne)
         if champ_seul:
             champ_en_attente = champ_seul
@@ -534,15 +533,15 @@ def deviner_fiche(nom, texte):
 
 
 # ---------------------------------------------------------------------------
-# Contacts : reconnaître et remplir
+# Contacts: recognize and fill in
 # ---------------------------------------------------------------------------
 
 _RE_TEL = re.compile(
-    # France : 06 12 34 56 78, +33 6 12 34 56 78
+    # France: 06 12 34 56 78, +33 6 12 34 56 78
     r"(?<!\d)(?:(?:\+|00)33\s?\(?0?\)?\s?[1-9]|0[1-9])(?:[\s.\-]?\d{2}){4}(?!\d)"
-    # International : +44 20 7946 0958, +49 30 1234567, +56 9 1234 5678…
+    # International: +44 20 7946 0958, +49 30 1234567, +56 9 1234 5678…
     r"|(?<![\d+])\+(?!33)\d{1,3}(?:[\s.\-]?\(?\d{1,4}\)?){2,5}(?!\d)"
-    # Amérique du Nord : (555) 123-4567, 555-123-4567
+    # North America: (555) 123-4567, 555-123-4567
     r"|(?<!\d)\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4}(?!\d)")
 _RE_CP = re.compile(r"(?<!\d)\d{5}(?!\d)\s+[A-Za-zÀ-ÿ]")
 _MOTS_RUE = re.compile(
@@ -553,7 +552,7 @@ _MOTS_RUE = re.compile(
     r"calle|avenida|pasaje|camino|plaza|paseo|piso|"
     r"strasse|str\.|weg|platz|gasse|allee|"
     r"via|viale|piazza|corso|vicolo|largo)(?=[\s,])"
-    # numéro après le nom de rue (Hauptstraße 12, Via Roma 5, Calle Mayor 3)
+    # number after the street name (Hauptstraße 12, Via Roma 5, Calle Mayor 3)
     r"|[a-z]+(?:strasse|str\.|weg|platz|gasse)\s+\d")
 
 
@@ -561,7 +560,7 @@ _RE_ADRESSE_NUMERO_PUIS_CP = re.compile(r"^\s*\d+[a-z]?\s+[^\d@]+[\s,]+\d{5}(?:-
 
 
 def ligne_adresse(ligne):
-    """Une ligne d'adresse postale : code postal + ville, « 12 rue … », « 742 Main St, City 49007 »."""
+    """A postal address line: postcode + city, "12 rue …", "742 Main St, City 49007"."""
     if " " not in ligne.strip():
         return False
     if _RE_CP.search(ligne) or _RE_ADRESSE_NUMERO_PUIS_CP.match(ligne):
@@ -576,15 +575,15 @@ _MOTS_COMPTE = re.compile(r"(mot de passe|mdp|password|identifiant|login|code se
 
 
 def _est_mot_de_passe_possible(ligne):
-    """Un « mot » seul, qui n'est ni un e-mail, ni un téléphone, ni un site."""
+    """A single "word" that is neither an e-mail, nor a phone number, nor a website."""
     return (" " not in ligne and "\t" not in ligne and not _RE_EMAIL.match(ligne)
             and not _RE_URL.match(ligne) and not _RE_TEL.search(ligne))
 
 
 def classer_document(texte):
-    """« compte », « contact » ou « autre ».
+    """"compte", "contact" or "autre".
 
-    Règles simples et prévisibles ; dans le doute : « autre ».
+    Simple, predictable rules; when in doubt: "autre".
     """
     lignes = [l.strip() for l in (texte or "").splitlines() if l.strip()]
     if not lignes:
@@ -620,14 +619,14 @@ def deviner_contact(nom, texte):
         for tel in [m.group(0) for m in _RE_TEL.finditer(ligne)]:
             chiffres = re.sub(r"\D", "", tel)
             francais = (re.match(r"^0[1-9]\d{8}$", chiffres) or re.match(r"^\s*(\+|00)33", tel))
-            if francais:  # numéro français : écrit « 06 12 34 56 78 »
+            if francais:  # French number: written "06 12 34 56 78"
                 if chiffres.startswith("0033"):
                     chiffres = chiffres[2:]
                 if chiffres.startswith("33"):
                     chiffres = "0" + chiffres[2:].lstrip("0")
                 joli = " ".join(chiffres[i:i + 2] for i in range(0, len(chiffres), 2))
                 mobile = chiffres[:2] in ("06", "07")
-            else:  # autre pays : gardé tel quel
+            else:  # other country: kept as is
                 joli = re.sub(r"\s+", " ", tel.strip())
                 mobile = False
             (portables if mobile else fixes).append(joli)
@@ -668,11 +667,11 @@ def _titre_possible(ligne):
 
 
 def decouper_contacts(nom, texte):
-    """Un document peut contenir plusieurs contacts (petit carnet d'adresses).
+    """A document may hold several contacts (a small address book).
 
-    - blocs séparés par une ligne vide, chacun commençant par un nom ;
-    - ou tableau Word : une rangée par personne (nom | téléphone | adresse…).
-    Sinon : un seul contact, au nom du fichier.
+    - blocks separated by an empty line, each starting with a name;
+    - or a Word table: one row per person (name | phone | address…).
+    Otherwise: a single contact, named after the file.
     """
     texte = (texte or "").strip()
     blocs = [b for b in re.split(r"\n\s*\n", texte) if b.strip()]
@@ -697,7 +696,7 @@ def decouper_contacts(nom, texte):
 
 
 def deviner(nom, texte, genre=None):
-    """Fiche(s) proposée(s) pour un document, selon son genre (deviné si absent)."""
+    """Card(s) suggested for a document, according to its kind (guessed if missing)."""
     genre = genre or classer_document(texte)
     if genre == "contact":
         return decouper_contacts(nom, texte)
@@ -705,7 +704,7 @@ def deviner(nom, texte, genre=None):
 
 
 # ---------------------------------------------------------------------------
-# Générateur de mots de passe
+# Password generator
 # ---------------------------------------------------------------------------
 
 MOTS_FACILES = """
@@ -744,29 +743,29 @@ def generer_mot_de_passe(longueur=16, majuscules=True, chiffres=True,
     if sans_ambigus:
         groupes = ["".join(c for c in g if c not in AMBIGUS) for g in groupes]
     longueur = max(longueur, len(groupes))
-    # au moins un caractère de chaque groupe choisi
+    # at least one character from each chosen group
     caracteres = [secrets.choice(g) for g in groupes]
     tous = "".join(groupes)
     caracteres += [secrets.choice(tous) for _i in range(longueur - len(caracteres))]
-    for i in range(len(caracteres) - 1, 0, -1):  # mélange sûr
+    for i in range(len(caracteres) - 1, 0, -1):  # secure shuffle
         j = secrets.randbelow(i + 1)
         caracteres[i], caracteres[j] = caracteres[j], caracteres[i]
     return "".join(caracteres)
 
 
 def generer_phrase(nb_mots=4):
-    liste = MOTS_PAR_LANGUE.get(langue_actuelle(), MOTS_FACILES)  # mots dans la langue choisie
+    liste = MOTS_PAR_LANGUE.get(langue_actuelle(), MOTS_FACILES)  # words in the chosen language
     mots = [secrets.choice(liste).capitalize() for _i in range(nb_mots)]
     return "-".join(mots) + "-" + str(secrets.randbelow(90) + 10)
 
 
 # ---------------------------------------------------------------------------
-# Le carnet sur le disque
+# The book on disk
 # ---------------------------------------------------------------------------
 
 
 def ecrire_json_sur(chemin, donnees):
-    """Écrit dans un fichier temporaire puis remplace : jamais de fichier à moitié écrit."""
+    """Write to a temporary file then replace: never a half-written file."""
     chemin = Path(chemin)
     chemin.parent.mkdir(parents=True, exist_ok=True)
     temporaire = chemin.with_suffix(chemin.suffix + ".tmp")
@@ -792,14 +791,14 @@ class Carnet:
         self.message_txt = ""
         self.message_recuperation = ""
 
-    # -- chargement ---------------------------------------------------------
+    # -- loading -------------------------------------------------------------
     def charger(self):
         if not self.fichier.exists():
             return
         try:
             self._charger_depuis(self.fichier)
         except Exception:
-            # Fichier abîmé : on le met de côté et on reprend la dernière sauvegarde.
+            # Damaged file: set it aside and fall back to the latest backup.
             date = datetime.now().strftime("%Y-%m-%d_%H%M%S")
             abime = self.fichier.with_name("pocketbook_illisible_" + date + ".json")
             try:
@@ -832,7 +831,7 @@ class Carnet:
         self.reglages.update(donnees.get("reglages", {}))
         self.assurer_categories()
 
-    # -- enregistrement -----------------------------------------------------
+    # -- saving --------------------------------------------------------------
     def enregistrer(self):
         ecrire_json_sur(self.fichier, {
             "version": 1,
@@ -847,7 +846,7 @@ class Carnet:
         return sorted(self.sauvegardes.glob("pocketbook_*.json"), reverse=True)
 
     def sauvegarde_du_jour(self, force=False):
-        """Une copie par jour (ou à la demande, ex. avant un import)."""
+        """One copy per day (or on demand, e.g. before an import)."""
         if not self.fichier.exists():
             return
         self.sauvegardes.mkdir(parents=True, exist_ok=True)
@@ -864,7 +863,7 @@ class Carnet:
             except OSError:
                 pass
 
-    # -- fiches ---------------------------------------------------------------
+    # -- cards ---------------------------------------------------------------
     def nouvelle_fiche(self, type="compte", **champs):
         fiche = {"id": uuid.uuid4().hex, "type": type}
         fiche.update({c: "" for c in CHAMPS[type]})
@@ -885,18 +884,18 @@ class Carnet:
         self.fiches = [f for f in self.fiches if f["id"] != id_fiche]
         source = (fiche or {}).get("source", "")
         if source and os.path.normcase(source) not in self.sources_connues():
-            # Supprimée exprès : la synchronisation ne doit pas la recréer.
+            # Deleted on purpose: synchronization must not recreate it.
             ecartees = self.reglages.setdefault("sources_ecartees", [])
             if os.path.normcase(source) not in ecartees:
                 ecartees.append(os.path.normcase(source))
 
     def reprendre_source(self, chemin):
-        """Rangement demandé à la main : le document n'est plus écarté."""
+        """Filing requested by hand: the document is no longer set aside."""
         ecartees = self.reglages.get("sources_ecartees", [])
         if os.path.normcase(chemin) in ecartees:
             ecartees.remove(os.path.normcase(chemin))
 
-    # -- catégories ------------------------------------------------------------
+    # -- categories ------------------------------------------------------------
     def categories(self):
         return self.reglages.setdefault("categories", [])
 
@@ -910,7 +909,7 @@ class Carnet:
         return ""
 
     def assurer_categories(self):
-        """Toute catégorie utilisée par une fiche existe dans la liste."""
+        """Every category used by a card exists in the list."""
         connues = {normaliser(n) for n in self.noms_categories()}
         for fiche in self.fiches:
             nom = fiche.get("categorie", "")
@@ -953,21 +952,21 @@ class Carnet:
         return sum(1 for f in self.fiches if f.get("categorie") == nom)
 
     def categorie_existante(self, nom):
-        """Garde une catégorie devinée seulement si elle existe encore."""
+        """Keep a guessed category only if it still exists."""
         for n in self.noms_categories():
             if normaliser(n) == normaliser(nom or ""):
                 return n
         return ""
 
-    # -- synchronisation avec le dossier des documents -------------------------
+    # -- synchronization with the documents folder -----------------------------
     def synchroniser_documents(self, documents, filtre_categories=None):
-        """Crée les fiches des nouveaux documents, met à jour celles des documents modifiés.
+        """Create cards for new documents, update those of changed documents.
 
-        - Une fiche modifiée à la main dans le carnet n'est jamais écrasée : elle reçoit
-          seulement une note « le document a changé ».
-        - Un document supprimé ne supprime pas sa fiche.
-        - Les documents non reconnus ne créent rien.
-        Renvoie un résumé {"crees", "mises_a_jour", "a_verifier"}.
+        - A card edited by hand in the book is never overwritten: it only gets
+          a "the document has changed" note.
+        - A deleted document does not delete its card.
+        - Unrecognized documents create nothing.
+        Returns a summary {"crees", "mises_a_jour", "a_verifier"}.
         """
         filtre = filtre_categories or (lambda p: p)
         maintenant = datetime.now().isoformat(timespec="seconds")
@@ -983,7 +982,7 @@ class Carnet:
             existantes = par_source.get(os.path.normcase(chemin), [])
             if not existantes:
                 if os.path.normcase(chemin) in ecartees:
-                    continue  # fiche supprimée exprès : on ne la recrée pas
+                    continue  # card deleted on purpose: do not recreate it
                 if genre in ("compte", "contact") and not doc.get("erreur"):
                     for champs in filtre(deviner(doc["nom"], doc["texte"], genre)):
                         self.nouvelle_fiche(source=chemin, source_mtime=doc["mtime"],
@@ -991,9 +990,9 @@ class Carnet:
                         resume["crees"] += 1
                 continue
             if all(f.get("source_mtime") == doc["mtime"] for f in existantes):
-                continue  # rien de neuf
+                continue  # nothing new
             if any(f.get("source_mtime") is None for f in existantes):
-                for f in existantes:   # fiche d'avant la synchronisation : on note juste la date
+                for f in existantes:   # card from before synchronization existed: just record the date
                     f["source_mtime"] = doc["mtime"]
                 continue
             modifiees = [f for f in existantes if f.get("modifiee_a_la_main")
@@ -1008,7 +1007,7 @@ class Carnet:
                     f["notes"] = (f.get("notes", "").rstrip() + "\n" + note).strip()
                 resume["a_verifier"] += 1
                 continue
-            # Fiche jamais touchée à la main : on la refait à partir du document
+            # Card never edited by hand: rebuild it from the document
             genre_fiche = genre if genre in ("compte", "contact") else existantes[0].get("type", "compte")
             propositions = filtre(deviner(doc["nom"], doc["texte"], genre_fiche))
             if len(propositions) == 1 and len(existantes) == 1:
@@ -1031,21 +1030,21 @@ class Carnet:
     def sources_connues(self):
         return {os.path.normcase(f.get("source", "")) for f in self.fiches if f.get("source")}
 
-    # -- copie .txt de chaque fiche -------------------------------------------
+    # -- .txt copy of each card ------------------------------------------------
     def synchroniser_txt(self):
-        """Un .txt par fiche dans le dossier choisi ; n'écrit que ce qui a changé.
+        """One .txt per card in the chosen folder; only writes what changed.
 
-        Renvoie True si tout va bien (sinon le problème est dans self.message_txt).
+        Returns True if all is well (otherwise the problem is in self.message_txt).
         """
         dossier = self.reglages.get("dossier_txt", "")
         if not dossier:
             return True
         dossier = Path(dossier)
         self.message_txt = ""
-        voulus = {}   # chemin relatif -> contenu
+        voulus = {}   # relative path -> content
         pris = set()
 
-        renommages = {}   # nouveau chemin relatif -> ancien (fiche renommée)
+        renommages = {}   # new relative path -> old one (renamed card)
         connus = {os.path.normcase(r) for r in self.reglages.get("txt_connus", [])}
 
         def place(fiche, rel):
@@ -1056,7 +1055,7 @@ class Carnet:
                 renommages[rel] = ancien
             fiche["fichier_txt"] = rel
 
-        # 1) chaque fiche garde son fichier s'il correspond toujours à son nom
+        # 1) each card keeps its file if it still matches its name
         a_placer = []
         for fiche in sorted(self.fiches, key=lambda f: f.get("cree_le", "")):
             sous = _(SOUS_DOSSIERS_TXT.get(fiche.get("type", "compte"), "Autres"))
@@ -1070,21 +1069,21 @@ class Carnet:
                 place(fiche, ancien)
             else:
                 a_placer.append((fiche, sous, base))
-        # 2) les nouvelles fiches (ou renommées) reçoivent un nom libre
+        # 2) new (or renamed) cards get a free name
         for fiche, sous, base in a_placer:
             n = 1
             while True:
                 rel = os.path.join(sous, (base if n == 1 else f"{base} ({n})") + ".txt")
                 libre = os.path.normcase(rel) not in pris and (
                     os.path.normcase(rel) in connus or not (dossier / rel).exists())
-                if libre:  # jamais écraser un fichier qui n'a pas été créé par le carnet
+                if libre:  # never overwrite a file that was not created by the book
                     break
                 n += 1
             place(fiche, rel)
 
         try:
             voulus_n = {os.path.normcase(r) for r in voulus}
-            # Fiche renommée : on renomme son fichier (au lieu d'en créer un nouveau)
+            # Renamed card: rename its file (instead of creating a new one)
             for rel, ancien in renommages.items():
                 source, cible = dossier / ancien, dossier / rel
                 if (os.path.normcase(ancien) not in voulus_n and source.exists()
@@ -1107,7 +1106,7 @@ class Carnet:
                         f.write(contenu)
                     os.replace(temporaire, chemin)
                 self._cache_txt[str(chemin)] = contenu
-            # 3) fichiers de fiches supprimées : rangés à part, jamais effacés
+            # 3) files of deleted cards: moved aside, never erased
             for rel in self.reglages.get("txt_connus", []):
                 if os.path.normcase(rel) in voulus_n:
                     continue
@@ -1130,7 +1129,7 @@ class Carnet:
             return False
 
     def changer_dossier_txt(self, nouveau):
-        """Nouveau dossier : tout est réécrit là-bas (l'ancien reste tel quel)."""
+        """New folder: everything is rewritten there (the old one is left as is)."""
         self.reglages["dossier_txt"] = str(nouveau)
         self.reglages["txt_connus"] = []
         self._cache_txt = {}
@@ -1138,13 +1137,13 @@ class Carnet:
             fiche.pop("fichier_txt", None)
 
 
-SOUS_DOSSIERS_TXT = {"compte": "Mots de passe", "contact": "Contacts"}   # traduits à l'usage
+SOUS_DOSSIERS_TXT = {"compte": "Mots de passe", "contact": "Contacts"}   # translated when used
 _INTERDITS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _RESERVES = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
 
 
 def nom_de_fichier(nom):
-    """Nom de fichier Windows valide à partir du nom de la fiche."""
+    """Valid Windows file name built from the card's name."""
     propre = _INTERDITS.sub("-", nom or "").strip().strip(".").strip()
     propre = re.sub(r"\s+", " ", propre)[:80].strip()
     if not propre or propre.upper() in _RESERVES:
@@ -1160,14 +1159,14 @@ def _date_lisible(iso):
 
 
 def champ_visible(fiche, champ):
-    """Un champ facultatif n'apparaît que s'il est rempli ou ajouté exprès."""
+    """An optional field only appears if it is filled in or added on purpose."""
     genre = fiche.get("type", "compte")
     return (champ not in CHAMPS_FACULTATIFS.get(genre, []) or bool(fiche.get(champ))
             or champ in fiche.get("champs_ajoutes", []))
 
 
 def texte_de_fiche(fiche):
-    """Contenu du .txt d'une fiche (lisible dans le Bloc-notes)."""
+    """Content of a card's .txt file (readable in Notepad)."""
     genre = fiche.get("type", "compte")
     lignes = [fiche.get("nom", "") or _("Sans nom"), "=" * max(len(fiche.get("nom", "")), 8), ""]
     blocs = []
@@ -1203,7 +1202,7 @@ def fiche_correspond(fiche, recherche):
 
 
 # ---------------------------------------------------------------------------
-# Index des documents (lecture en arrière-plan, avec mémoire)
+# Document index (background reading, with a cache)
 # ---------------------------------------------------------------------------
 
 
@@ -1216,7 +1215,7 @@ def charger_index():
 
 
 def indexer(dossier, ancien_index, progression=None, exclure=()):
-    """Lit les documents nouveaux ou modifiés ; réutilise la mémoire pour les autres."""
+    """Read new or changed documents; reuse the cache for the others."""
     anciens = ancien_index.get("documents", {}) if ancien_index.get("dossier") == dossier else {}
     chemins, anciens_doc = lister_documents(dossier, exclure)
     total = len(chemins)
@@ -1234,7 +1233,7 @@ def indexer(dossier, ancien_index, progression=None, exclure=()):
             try:
                 texte = lire_document(chemin)
                 erreur = ""
-            except Exception as exc:  # document abîmé, protégé, ancien .doc renommé…
+            except Exception as exc:  # damaged or protected document, renamed old .doc…
                 texte = ""
                 erreur = _("Impossible de lire ce document ({erreur}).", erreur=type(exc).__name__)
             nouveaux[chemin] = {"nom": Path(chemin).stem, "mtime": st.st_mtime,
@@ -1249,11 +1248,11 @@ def indexer(dossier, ancien_index, progression=None, exclure=()):
 # Interface
 # ===========================================================================
 
-import tkinter as tk  # noqa: E402  (après la logique, pour pouvoir la tester seule)
+import tkinter as tk  # noqa: E402  (after the logic, so it can be tested on its own)
 from tkinter import filedialog, messagebox, ttk  # noqa: E402
 import tkinter.font as tkfont  # noqa: E402
 
-# Polices lisibles présentes sur chaque système (la première trouvée est utilisée)
+# Readable fonts available on each system (the first one found is used)
 POLICES_TEXTE = ["Verdana", "Segoe UI", "DejaVu Sans", "Noto Sans", "Helvetica"]
 POLICES_MONO = ["Consolas", "Menlo", "DejaVu Sans Mono", "Noto Sans Mono", "Courier New"]
 
@@ -1270,18 +1269,18 @@ def police_disponible(candidates):
 
 
 def mettre_icone(fenetre):
-    """Icône de la fenêtre : .ico sous Windows, .png ailleurs."""
+    """Window icon: .ico on Windows, .png elsewhere."""
     try:
         if EST_WINDOWS:
             fenetre.iconbitmap(default=ressource("pocketbook.ico"))
         else:
             image = tk.PhotoImage(file=ressource("pocketbook.png"))
             fenetre.iconphoto(True, image)
-            fenetre._icone = image  # garder l'image en mémoire
+            fenetre._icone = image  # keep the image in memory
     except Exception:
         pass
 
-# Thèmes de couleurs (tous vérifiés pour un bon contraste du texte)
+# Color themes (all checked for good text contrast)
 THEMES = {
     "clair": {"nom": "Clair", "BLEU_TEXTE": "#1E4F91", "VERT_TEXTE": "#1F6B3A", "FOND": "#F6F4EF", "BLANC": "#FFFFFF", "ENCRE": "#1B1A17",
               "GRIS": "#4A4740", "BORDURE": "#CFC9BC", "BORDURE_FORTE": "#8C8578",
@@ -1312,17 +1311,17 @@ THEMES = {
               "JAUNE_TEXTE": "#5E410B", "BARRE": "#EADCC2", "LETTRE_ETEINTE": "#B0A089",
               "FOND_TEXTE": "#FDF9F0"},
 }
-SUR_ACCENT = "#FFFFFF"   # texte sur les boutons bleus / verts, quel que soit le thème
+SUR_ACCENT = "#FFFFFF"   # text on blue / green buttons, whatever the theme
 
 
 def appliquer_theme_couleurs(nom):
-    """Change les couleurs utilisées par toute l'interface."""
+    """Change the colors used by the whole interface."""
     globals().update({k: v for k, v in THEMES.get(nom, THEMES["clair"]).items() if k != "nom"})
 
 
 appliquer_theme_couleurs("clair")
 
-TAILLES = [12, 14, 17, 20]          # tailles de texte (points)
+TAILLES = [12, 14, 17, 20]          # text sizes (points)
 LETTRES = ["Tout"] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + ["#"]
 ETIQUETTES_GENRE = {"compte": "Mot de passe", "contact": "Contact", "autre": "?"}
 NOMS_GENRE = {"compte": "un mot de passe", "contact": "un contact", "autre": "non reconnu"}
@@ -1355,7 +1354,7 @@ class Application:
         self._alerte_txt_montree = False
         self._synchro_demandee = False
 
-        # Langue : celle du carnet, sinon celle du système (ou choisie à l'installation)
+        # Language: the book's, otherwise the system's (or the one chosen at installation)
         if LANGUE_IMPOSEE[0]:
             self.carnet.reglages["langue"] = LANGUE_IMPOSEE[0]
         choisir_langue(self.carnet.reglages.get("langue") or langue_actuelle())
@@ -1399,7 +1398,7 @@ class Application:
         self._style()
 
     def _style(self):
-        """Couleurs des listes déroulantes et barres de défilement (selon le thème)."""
+        """Colors of drop-down lists and scrollbars (according to the theme)."""
         r = self.racine
         r.option_add("*TCombobox*Listbox.background", BLANC)
         r.option_add("*TCombobox*Listbox.foreground", ENCRE)
@@ -1444,9 +1443,9 @@ class Application:
     def _construire(self):
         r = self.racine
 
-        # --- En-tête
-        # 1re ligne : titre + taille du texte ; 2e ligne : les onglets (qui passent
-        # à la ligne si la fenêtre est étroite ou le texte très grand).
+        # --- Header
+        # 1st line: title + text size; 2nd line: the tabs (which wrap
+        # when the window is narrow or the text very large).
         entete = tk.Frame(r, bg=BLANC, padx=16, pady=8)
         entete.pack(fill="x")
         tk.Frame(r, bg=BORDURE, height=2).pack(fill="x")
@@ -1477,7 +1476,7 @@ class Application:
             b.pack(side="left", padx=3)
             self.boutons_taille.append(b)
 
-        # --- Barre des lettres
+        # --- Letter bar
         self.barre_lettres = tk.Frame(r, bg=BARRE, padx=12, pady=8)
         self.barre_lettres.pack(fill="x")
         self.sep_lettres = tk.Frame(r, bg=BORDURE, height=1)
@@ -1491,11 +1490,11 @@ class Application:
             self.boutons_lettres[lettre] = b
         self.barre_lettres.bind("<Configure>", lambda e: self._placer_lettres())
 
-        # --- Pied de page (avant le centre pour rester visible)
+        # --- Footer (before the center so it stays visible)
         pied = tk.Frame(r, bg=BLANC, padx=16, pady=8)
         pied.pack(side="bottom", fill="x")
         tk.Frame(r, bg=BORDURE, height=2).pack(side="bottom", fill="x")
-        # Le bouton d'abord : si la fenêtre est étroite, c'est la phrase qui est coupée.
+        # The button first: if the window is narrow, the sentence gets cut instead.
         self.bouton(pied, _("Enregistrer maintenant"), self.enregistrer_maintenant,
                     "vert").pack(side="right")
         self.etiquette_etat = tk.Label(pied, text="", font=self.f_gras, bg=BLANC, fg=VERT_TEXTE)
@@ -1503,7 +1502,7 @@ class Application:
         self.etiquette_synchro = tk.Label(pied, text="", font=self.f_petit, bg=BLANC, fg=GRIS)
         self.etiquette_synchro.pack(side="left", padx=(16, 0))
 
-        # --- Centre
+        # --- Center
         self.centre = tk.Frame(r, bg=FOND)
         self.centre.pack(fill="both", expand=True)
         self._page_fiches()
@@ -1511,12 +1510,12 @@ class Application:
         self._page_reglages()
 
     def _placer_lettres(self):
-        """Range les lettres sur une ou plusieurs lignes selon la largeur."""
+        """Lay the letters out on one or more lines depending on the width."""
         self._placer_en_lignes(self.barre_lettres, [self.boutons_lettres[l] for l in LETTRES],
                                marge=24, ecart=3)
 
     def _placer_en_lignes(self, cadre, boutons, marge=0, ecart=3):
-        """Place des boutons de gauche à droite, en passant à la ligne si besoin."""
+        """Place buttons from left to right, wrapping to a new line if needed."""
         largeur_dispo = max(cadre.winfo_width() - marge, 200)
         ligne, colonne, x = 0, 0, 0
         for b in boutons:
@@ -1527,9 +1526,9 @@ class Application:
             colonne += 1
             x += w
 
-    # ------------------------------------------------------- page des fiches
+    # ----------------------------------------------------------- cards page
     def _page_fiches(self):
-        """Une seule page, qui montre soit les mots de passe, soit les contacts."""
+        """A single page, showing either the passwords or the contacts."""
         p = self.page_fiches = tk.Frame(self.centre, bg=FOND, padx=16, pady=12)
 
         gauche = tk.Frame(p, bg=FOND)
@@ -1571,7 +1570,7 @@ class Application:
         self.bouton_nouvelle = self.bouton(gauche, "", self.creer_fiche, "contour_bleu")
         self.bouton_nouvelle.pack(fill="x", pady=(4, 0))
 
-        # Côté droit : la fiche, construite selon ses champs
+        # Right side: the card, built from its fields
         self.droite = tk.Frame(p, bg=BLANC, padx=22, pady=16,
                                highlightthickness=2, highlightbackground=BORDURE)
         self.droite.pack(side="left", fill="both", expand=True)
@@ -1584,7 +1583,7 @@ class Application:
         self.champ_nom = None
         self._focus_apres = None
 
-    # ---------------------------------------------------- formulaire d'une fiche
+    # ------------------------------------------------------------- card form
     def _var_fiche(self, cle, valeur, index_perso=None):
         var = tk.StringVar(value=valeur)
         var.trace_add("write", lambda *a: self._valeur_changee(cle, var.get(), index_perso))
@@ -1687,7 +1686,7 @@ class Application:
                     self._bouton_retirer(f, r, champ)
             r += 1
 
-        # Champs ajoutés à la main (n° client, question secrète…)
+        # Fields added by hand (customer no., secret question…)
         for i, perso in enumerate(fiche.get("perso", [])):
             self._libelle(f, r, perso.get("libelle", "") or _("Champ"))
             champ_saisie = self.champ_texte(f, self._var_fiche("perso", perso.get("valeur", ""), i))
@@ -1744,7 +1743,7 @@ class Application:
         cadre.columnconfigure(0, weight=1)
         tk.Label(cadre, text=_("Mot de passe"), font=self.f_gras, bg=JAUNE_FOND,
                  fg=JAUNE_TEXTE, anchor="w").grid(row=0, column=0, sticky="w")
-        # Mot de passe déjà noté : verrouillé (évite de l'effacer par mégarde)
+        # Password already saved: locked (avoids erasing it by mistake)
         verrouille = bool(valeur)
         saisie = tk.Entry(cadre, textvariable=self._var_fiche("mdp", valeur), font=self.f_mdp,
                           bg=BLANC, fg=ENCRE, relief="solid", bd=1, highlightthickness=2,
@@ -1776,7 +1775,7 @@ class Application:
         self.bouton(boutons, _("↻  Créer un nouveau mot de passe"),
                     self.ouvrir_generateur, "bleu").pack(side="left")
 
-    # ------------------------------------------------- changements dans la fiche
+    # ------------------------------------------------------ changes in the card
     def _valeur_changee(self, cle, valeur, index_perso=None):
         if self._chargement:
             return
@@ -1797,7 +1796,7 @@ class Application:
                 couleur = self.carnet.couleur_categorie(valeur)
                 self.pastille_categorie.configure(bg=couleur or BLANC, bd=1 if couleur else 0)
         fiche["modifie_le"] = datetime.now().isoformat(timespec="seconds")
-        fiche["modifiee_a_la_main"] = True   # la synchronisation ne l'écrasera pas
+        fiche["modifiee_a_la_main"] = True   # synchronization will not overwrite it
         self.programmer_enregistrement()
 
     def _texte_change(self, cle):
@@ -1903,11 +1902,11 @@ class Application:
             if cle == "categorie":
                 self._maj_ligne_liste(fiche)
         fiche["modifie_le"] = datetime.now().isoformat(timespec="seconds")
-        fiche["modifiee_a_la_main"] = True   # la synchronisation ne l'écrasera pas
+        fiche["modifiee_a_la_main"] = True   # synchronization will not overwrite it
         self.montrer_fiche(fiche)
         self.programmer_enregistrement()
 
-    # ---------------------------------------------------------- page réglages
+    # ---------------------------------------------------------- settings page
     def _carte(self, parent, titre, explication=""):
         carte = tk.Frame(parent, bg=BLANC, padx=20, pady=16,
                          highlightthickness=2, highlightbackground=BORDURE)
@@ -1924,7 +1923,7 @@ class Application:
         colonne_gauche = tk.Frame(p, bg=FOND)
         colonne_gauche.pack(side="left", fill="both", expand=True, padx=(0, 16))
 
-        # --- À propos (en bas à gauche)
+        # --- About (bottom left)
         apropos = self._carte(colonne_gauche, _("À propos"),
                               _("Pocket Book {version} — fonctionne entièrement sans internet : "
                                 "rien ne quitte cet ordinateur.", version=VERSION))
@@ -1939,7 +1938,7 @@ class Application:
             self.bouton(ligne_apropos, _("Désinstaller…"), self.desinstaller_depuis_reglages,
                         "danger").pack(side="right")
 
-        # --- Catégories
+        # --- Categories
         cat = self._carte(colonne_gauche, _("Catégories"),
                           _("Les catégories servent à trier les fiches. Chacune a sa couleur, "
                           "qui apparaît dans la liste des fiches."))
@@ -1964,7 +1963,7 @@ class Application:
         droite = tk.Frame(p, bg=FOND)
         droite.pack(side="left", fill="both", expand=True)
 
-        # --- Langue
+        # --- Language
         langue = self._carte(droite, _("Langue"))
         langue.pack(fill="x", pady=(0, 16))
         ligne_langues = tk.Frame(langue, bg=BLANC)
@@ -1979,7 +1978,7 @@ class Application:
                       command=lambda c=code: self.choisir_langue_interface(c)).pack(
                 side="left", padx=(0, 6), pady=2)
 
-        # --- Thèmes
+        # --- Themes
         theme = self._carte(droite, _("Couleurs de l'écran"),
                             _("Choisissez ce qui est le plus agréable à lire."))
         theme.pack(fill="x")
@@ -1997,7 +1996,7 @@ class Application:
         grille.columnconfigure(0, weight=1)
         grille.columnconfigure(1, weight=1)
 
-        # --- Copie .txt
+        # --- .txt copy
         txt = self._carte(droite, _("Copie des fiches en .txt"),
                           _("Chaque fiche est recopiée dans un fichier .txt, mis à jour tout seul. "
                           "Les changements se font dans le carnet, pas dans les .txt."))
@@ -2090,7 +2089,7 @@ class Application:
         choisir_langue(code)
         self.carnet.reglages["langue"] = code
         self._reconstruire()
-        self.programmer_enregistrement()  # les copies .txt sont réécrites dans la langue
+        self.programmer_enregistrement()  # the .txt copies are rewritten in the new language
 
     def choisir_theme(self, cle):
         if cle == self.carnet.reglages.get("theme", "clair"):
@@ -2101,7 +2100,7 @@ class Application:
         self.programmer_enregistrement()
 
     def _reconstruire(self):
-        """Redessine toute la fenêtre (après un changement de thème)."""
+        """Redraw the whole window (after a theme change)."""
         page = self.page
         for w in self.racine.winfo_children():
             w.destroy()
@@ -2112,7 +2111,7 @@ class Application:
         self._afficher_dossier()
         self.afficher_page(page)
 
-    # ---------------------------------------------------------- page documents
+    # --------------------------------------------------------- documents page
     def _page_documents(self):
         p = self.page_documents = tk.Frame(self.centre, bg=FOND, padx=16, pady=12)
 
@@ -2146,7 +2145,7 @@ class Application:
             side="left", anchor="n", pady=(8, 0))
         zone_filtres = tk.Frame(filtres, bg=FOND)
         zone_filtres.pack(side="left", fill="x", expand=True, padx=(4, 0))
-        # Par défaut : seulement ce qui reste à ranger (le reste est déjà dans le carnet)
+        # By default: only what is left to file (the rest is already in the book)
         self.filtre_genre = getattr(self, "filtre_genre", "a_ranger")
         self.boutons_filtre = {}
         for genre, texte in (("a_ranger", _("À ranger")), ("tous", _("Tout")),
@@ -2199,7 +2198,7 @@ class Application:
         self.bouton_fiche_doc.pack(side="left")
         self.bouton(boutons, _("Ouvrir dans Word"), self.ouvrir_document).pack(side="left", padx=10)
 
-        # « Ce que le carnet a compris » : le document remis en forme, champ par champ
+        # "What the book understood": the document reformatted, field by field
         self.cadre_compris = tk.Frame(droite, bg=JAUNE_FOND, padx=14, pady=10,
                                       highlightthickness=2, highlightbackground=JAUNE_BORD)
         self.cadre_compris.pack(fill="x", pady=(0, 10))
@@ -2223,7 +2222,7 @@ class Application:
         self.page_fiches.pack_forget()
         self.page_documents.pack_forget()
         self.page_reglages.pack_forget()
-        # La barre des lettres ne sert pas dans les réglages
+        # The letter bar is not used in the settings
         if page == "reglages":
             self.barre_lettres.pack_forget()
             self.sep_lettres.pack_forget()
@@ -2271,7 +2270,7 @@ class Application:
             self.remplir_liste_fiches()
 
     def choisir_lettre(self, lettre):
-        # Une lettre vide la recherche, pour ne pas tout mélanger.
+        # A letter clears the search, so the two don't mix.
         var = self.var_recherche_docs if self.page == "documents" else self.var_recherche
         if var.get():
             var.set("")
@@ -2292,7 +2291,7 @@ class Application:
                 b.configure(bg=BARRE, fg=LETTRE_ETEINTE, state="disabled",
                             disabledforeground=LETTRE_ETEINTE, cursor="arrow")
 
-    # -------------------------------------------------------- taille du texte
+    # --------------------------------------------------------------- text size
     def appliquer_taille(self, niveau, enregistrer=True):
         niveau = max(0, min(len(TAILLES) - 1, int(niveau)))
         t = TAILLES[niveau]
@@ -2314,7 +2313,7 @@ class Application:
             self.carnet.reglages["taille_texte"] = niveau
             self.programmer_enregistrement()
 
-    # ---------------------------------------------------------- liste fiches
+    # -------------------------------------------------------------- card list
     def _recherche_fiches_changee(self):
         if self.var_recherche.get():
             self.lettre = "Tout"
@@ -2393,7 +2392,7 @@ class Application:
         self.lettre = "Tout"
         self.remplir_liste_fiches()
         self.programmer_enregistrement()
-        # On propose directement de taper le nom.
+        # Offer to type the name right away.
         if self.champ_nom is not None:
             self.champ_nom.focus_set()
             self.champ_nom.select_range(0, "end")
@@ -2416,7 +2415,7 @@ class Application:
         self.remplir_liste_fiches()
         self.programmer_enregistrement()
 
-    # ---------------------------------------------------------- petits outils
+    # ------------------------------------------------------------ small helpers
     def copier(self, texte, bouton=None):
         if not texte:
             return
@@ -2438,7 +2437,7 @@ class Application:
             adresse = "https://" + adresse
         webbrowser.open(adresse)
 
-    # ------------------------------------------------------------ générateur
+    # ---------------------------------------------------------------- generator
     def ouvrir_generateur(self):
         fiche = self.carnet.trouver(self.id_courant)
         if fiche is None:
@@ -2465,11 +2464,11 @@ class Application:
             fiche["notes"] = (notes + "\n" + note).strip()
         fiche["mdp"] = nouveau
         fiche["modifie_le"] = datetime.now().isoformat(timespec="seconds")
-        fiche["modifiee_a_la_main"] = True   # la synchronisation ne l'écrasera pas
+        fiche["modifiee_a_la_main"] = True   # synchronization will not overwrite it
         self.montrer_fiche(fiche)
         self.programmer_enregistrement()
 
-    # ----------------------------------------------------------- enregistrer
+    # --------------------------------------------------------------------- save
     def programmer_enregistrement(self):
         self.etiquette_etat.configure(text=_("✎ Modification en cours…"), fg=GRIS)
         if self._minuterie is not None:
@@ -2478,7 +2477,7 @@ class Application:
 
     def enregistrer(self):
         self._minuterie = None
-        copie_ok = self.carnet.synchroniser_txt()  # d'abord les .txt (met à jour leur liste)
+        copie_ok = self.carnet.synchroniser_txt()  # the .txt files first (updates their list)
         try:
             self.carnet.enregistrer()
         except Exception as exc:
@@ -2492,7 +2491,7 @@ class Application:
             self.etiquette_etat.configure(text=_("✔ Tout est enregistré (à {heure})", heure=heure), fg=VERT_TEXTE)
             self._alerte_txt_montree = False
         else:
-            # Le carnet est bien enregistré ; seule la copie .txt a échoué (clé USB retirée…).
+            # The book is saved; only the .txt copy failed (USB stick removed…).
             self.etiquette_etat.configure(
                 text=_("✔ Enregistré (à {heure}) — ⚠ copie .txt impossible", heure=heure), fg=ROUGE)
             if not self._alerte_txt_montree:
@@ -2523,7 +2522,7 @@ class Application:
                 return
         self.racine.destroy()
 
-    # ------------------------------------------------------------- documents
+    # ---------------------------------------------------------------- documents
     def _apres_ouverture(self):
         if self.carnet.message_recuperation:
             messagebox.showwarning(NOM_APPLI, self.carnet.message_recuperation)
@@ -2532,7 +2531,7 @@ class Application:
         dossier = self.carnet.reglages.get("dossier_documents", "")
         self._afficher_dossier()
         if self.carnet.fiches:
-            self.enregistrer()  # crée les .txt qui manqueraient
+            self.enregistrer()  # create any missing .txt files
         if dossier and os.path.isdir(dossier):
             self.lancer_lecture()
 
@@ -2562,14 +2561,14 @@ class Application:
                             + _("\n\nL'ancien dossier n'a pas été modifié."))
 
     def ouvrir_fichier_fiche(self, quoi):
-        """Ouvre la copie .txt de la fiche, son document d'origine, ou le dossier (fichier sélectionné)."""
+        """Open the card's .txt copy, its source document, or the folder (file selected)."""
         fiche = self.carnet.trouver(self.id_courant)
         if fiche is None:
             return
         if quoi == "source":
             chemin = fiche.get("source", "")
         else:
-            self.enregistrer()  # la copie .txt doit être à jour avant de l'ouvrir
+            self.enregistrer()  # the .txt copy must be up to date before opening it
             rel = fiche.get("fichier_txt", "")
             chemin = str(Path(self.carnet.reglages.get("dossier_txt", "")) / rel) if rel else ""
         if not chemin or not os.path.exists(chemin):
@@ -2669,7 +2668,7 @@ class Application:
             pass
         self.racine.after(100, self._suivre_lecture)
 
-    # ------------------------------------------------- synchronisation
+    # ------------------------------------------------------- synchronization
     def _appliquer_synchro(self, afficher_resume=False):
         documents = self._documents()
         if not documents:
@@ -2713,7 +2712,7 @@ class Application:
             self.synchroniser_maintenant()
 
     def _synchro_periodique(self):
-        """Toutes les minutes : relit le dossier (seuls les fichiers changés sont relus)."""
+        """Every minute: rescan the folder (only changed files are read again)."""
         dossier = self.carnet.reglages.get("dossier_documents", "")
         if (self.carnet.reglages.get("synchro_auto", True) and dossier
                 and os.path.isdir(dossier) and not self.lecture_en_cours):
@@ -2795,7 +2794,7 @@ class Application:
         self.etiquette_compte_docs.configure(text=texte)
 
     def _texte_cherchable(self, chemin, doc):
-        """Nom + texte sans accents, gardé en mémoire pour chercher vite."""
+        """Name + text without accents, cached for fast searching."""
         cle = (chemin, doc.get("mtime"))
         if cle not in self._cache_recherche:
             self._cache_recherche[cle] = normaliser(doc["nom"] + "\n" + doc.get("texte", ""))
@@ -2842,7 +2841,7 @@ class Application:
                 if os.path.normcase(f.get("source", "")) == os.path.normcase(chemin)]
 
     def _montrer_compris(self, chemin, doc):
-        """Affiche le document remis en forme (ou la fiche déjà rangée)."""
+        """Show the reformatted document (or the card it was already filed into)."""
         for w in self.cadre_compris.winfo_children():
             w.destroy()
         rangees = self._fiches_du_document(chemin)
@@ -2890,7 +2889,7 @@ class Application:
                      bg=JAUNE_FOND, fg=JAUNE_TEXTE).grid(row=r, column=0, columnspan=2, sticky="w")
 
     def voir_fiche(self, fiche):
-        """Passe à l'onglet de la fiche et la sélectionne."""
+        """Switch to the card's tab and select it."""
         self.id_courant = fiche["id"]
         self.afficher_page(fiche.get("type", "compte"))
 
@@ -2935,9 +2934,9 @@ class Application:
         texte += "\n\n" + _("Vérifiez que chaque information est au bon endroit.")
         messagebox.showinfo(_("Fiche créée"), texte)
 
-    # ---------------------------------------------- glisser-déposer / import
+    # -------------------------------------------------- drag and drop / import
     def _activer_glisser_deposer(self):
-        """Accepte les fichiers glissés depuis l'Explorateur Windows sur la fenêtre."""
+        """Accept files dragged from Windows Explorer onto the window."""
         self.depots = queue.Queue()
         if not sys.platform.startswith("win"):
             return
@@ -2980,12 +2979,12 @@ class Application:
                     return 0
                 return user32.CallWindowProcW(ancienne["proc"], h, message, wparam, lparam)
 
-            self._procedure_depot = WNDPROC(procedure)   # gardée en mémoire (important)
+            self._procedure_depot = WNDPROC(procedure)   # kept in memory (important)
             ancienne["proc"] = definir(hwnd, GWLP_WNDPROC,
                                        ctypes.cast(self._procedure_depot, ctypes.c_void_p))
             shell32.DragAcceptFiles(hwnd, True)
         except Exception:
-            return  # pas de glisser-déposer : le bouton « Importer des fichiers… » reste là
+            return  # no drag and drop: the "Import files…" button is still there
         self.racine.after(300, self._surveiller_depots)
 
     def _surveiller_depots(self):
@@ -3004,7 +3003,7 @@ class Application:
             self.importer_chemins(list(chemins))
 
     def importer_chemins(self, chemins):
-        """Range des fichiers (ou dossiers entiers) glissés ou choisis."""
+        """File away files (or whole folders) dragged in or chosen."""
         dossier_txt = self.carnet.reglages.get("dossier_txt", "")
         fichiers, anciens_doc, ignores = [], 0, 0
         for chemin in chemins:
@@ -3115,19 +3114,19 @@ class Application:
             return None
 
     def _garder_categories(self, propositions):
-        """Une catégorie devinée n'est gardée que si elle existe dans les réglages."""
+        """A guessed category is only kept if it exists in the settings."""
         for champs in propositions:
             if "categorie" in champs:
                 champs["categorie"] = self.carnet.categorie_existante(champs["categorie"])
         return propositions
 
     def importer_tout(self):
-        """Ancien bouton « Tout ranger » : c'est maintenant la synchronisation."""
+        """Former "File everything" button: it is now the synchronization."""
         self.synchroniser_maintenant()
 
 
 def demander_texte(appli, titre, question, valeur=""):
-    """Petite fenêtre pour taper un texte (en gros caractères). None si annulé."""
+    """Small window to type some text (in large print). None if cancelled."""
     reponse = {"texte": None}
     f = tk.Toplevel(appli.racine)
     f.title(titre)
@@ -3157,7 +3156,7 @@ def demander_texte(appli, titre, question, valeur=""):
 
 
 def choisir_couleur(appli, nom):
-    """Grille de couleurs douces (toutes lisibles avec du texte foncé)."""
+    """Grid of soft colors (all readable with dark text)."""
     reponse = {"couleur": None}
     f = tk.Toplevel(appli.racine)
     f.title(_("Couleur de la catégorie"))
@@ -3186,7 +3185,7 @@ def choisir_couleur(appli, nom):
 
 
 def demander_genre(appli, nom):
-    """Petite fenêtre : « C'est un mot de passe ou un contact ? »"""
+    """Small window asking: is it a password or a contact?"""
     reponse = {"genre": None}
     f = tk.Toplevel(appli.racine)
     f.title(_("Quel genre de document ?"))
@@ -3212,7 +3211,7 @@ def demander_genre(appli, nom):
 
 
 class FenetreGenerateur:
-    """Petite fenêtre pour créer un mot de passe."""
+    """Small window to create a password."""
 
     def __init__(self, appli):
         self.appli = appli
@@ -3294,8 +3293,8 @@ class FenetreGenerateur:
 
 
 # ---------------------------------------------------------------------------
-# Installation / désinstallation (programme fabriqué : Windows et Linux ;
-# sur Mac, l'application se glisse simplement dans « Applications »)
+# Installation / uninstallation (built program: Windows and Linux;
+# on Mac, the app is simply dragged into "Applications")
 # ---------------------------------------------------------------------------
 
 EDITEUR = "Louis"
@@ -3303,7 +3302,7 @@ CLE_DESINSTALLATION = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Pock
 
 
 def dossier_special(numero, secours):
-    """Dossier Windows (Bureau = 0x10, Programmes du menu Démarrer = 0x02)."""
+    """Windows folder (Desktop = 0x10, Start menu Programs = 0x02)."""
     try:
         import ctypes
         from ctypes import wintypes
@@ -3328,7 +3327,7 @@ def dossier_bureau_linux():
 
 
 def installation_possible():
-    """Seul le programme fabriqué (.exe, binaire Linux) s'installe lui-même."""
+    """Only the built program (.exe, Linux binary) installs itself."""
     return getattr(sys, "frozen", False) and (EST_WINDOWS or EST_LINUX)
 
 
@@ -3354,7 +3353,7 @@ def chemins_installation():
 
 
 def creer_raccourci(lien, cible):
-    """Windows : raccourci .lnk (outil intégré à Windows). Linux : lanceur .desktop."""
+    """Windows: .lnk shortcut (built-in Windows tool). Linux: .desktop launcher."""
     import subprocess
     lien = Path(lien)
     lien.parent.mkdir(parents=True, exist_ok=True)
@@ -3381,7 +3380,7 @@ def creer_raccourci(lien, cible):
         "Terminal=false\n"
         "Categories=Utility;Office;\n", encoding="utf-8")
     os.chmod(lien, 0o755)
-    try:  # GNOME : autoriser le lancement depuis le Bureau
+    try:  # GNOME: allow launching from the Desktop
         subprocess.run(["gio", "set", str(lien), "metadata::trusted", "true"],
                        capture_output=True, timeout=5)
     except Exception:
@@ -3405,7 +3404,7 @@ def lire_registre(nom, defaut=None):
 
 
 def option_bureau():
-    """L'utilisateur avait-il choisi une icône sur le Bureau ?"""
+    """Had the user chosen a Desktop icon?"""
     if EST_WINDOWS:
         return bool(lire_registre("RaccourciBureau", 1))
     try:
@@ -3420,7 +3419,7 @@ def deja_installe():
 
 
 def inscrire_dans_windows(exe, avec_bureau):
-    """Fait apparaître « Pocket Book » dans Paramètres > Applications (désinstallable)."""
+    """Make "Pocket Book" appear in Settings > Apps (so it can be uninstalled)."""
     import winreg
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CLE_DESINSTALLATION) as cle:
         valeurs = {
@@ -3441,9 +3440,9 @@ def inscrire_dans_windows(exe, avec_bureau):
 
 
 def installer(exe_source, avec_bureau):
-    """Copie le programme, crée les raccourcis, l'inscrit dans le système.
+    """Copy the program, create the shortcuts, register it with the system.
 
-    Renvoie (réussi, message d'erreur).
+    Returns (success, error message).
     """
     chemins = chemins_installation()
     exe = chemins["exe"]
@@ -3451,7 +3450,7 @@ def installer(exe_source, avec_bureau):
         exe.parent.mkdir(parents=True, exist_ok=True)
         if not meme_fichier(exe_source, exe):
             if EST_LINUX and exe.exists():
-                exe.unlink()  # Linux : on peut remplacer un programme même ouvert
+                exe.unlink()  # Linux: a program can be replaced even while it is running
             shutil.copy2(exe_source, exe)
         if EST_LINUX:
             os.chmod(exe, 0o755)
@@ -3489,7 +3488,7 @@ def installer(exe_source, avec_bureau):
 
 
 def retirer_installation(supprimer_donnees):
-    """Enlève programme, raccourcis et inscription. Renvoie un texte de fin."""
+    """Remove the program, shortcuts and registration. Returns a closing text."""
     import subprocess
     chemins = chemins_installation()
     for cle in ("bureau", "menu", "commande"):
@@ -3509,7 +3508,7 @@ def retirer_installation(supprimer_donnees):
         shutil.rmtree(DOSSIER_DONNEES, ignore_errors=True)
     dossier = chemins["dossier"]
     if EST_WINDOWS:
-        # Le programme est ouvert : son dossier est effacé juste après sa fermeture.
+        # The program is running: its folder is deleted right after it closes.
         subprocess.Popen(
             f'cmd /c ping 127.0.0.1 -n 4 > nul & rmdir /s /q "{dossier}"',
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), cwd=str(Path.home()))
@@ -3522,7 +3521,7 @@ def retirer_installation(supprimer_donnees):
 
 
 def _fenetre_simple(titre, parent=None):
-    """Petite fenêtre claire et lisible pour l'installation."""
+    """Small, clear and readable window for the installation."""
     appliquer_theme_couleurs("clair")
     racine = tk.Toplevel(parent) if parent is not None else tk.Tk()
     racine.title(titre)
@@ -3547,7 +3546,7 @@ def _gros_bouton(parent, texte, commande, polices, principal=False):
 
 
 def _choix_langue_installation(zone, polices, rafraichir):
-    """Petite rangée de langues en haut de la fenêtre d'installation."""
+    """Small row of languages at the top of the installation window."""
     ligne = tk.Frame(zone, bg=BLANC)
     ligne.pack(anchor="e", pady=(0, 10))
     for code, nom in LANGUES.items():
@@ -3560,7 +3559,7 @@ def _choix_langue_installation(zone, polices, rafraichir):
 
 
 def fenetre_installation():
-    """Lancé depuis un téléchargement, une clé USB… : propose d'installer (ou de mettre à jour)."""
+    """Launched from a download, a USB stick…: offer to install (or update)."""
     import subprocess
     chemins = chemins_installation()
     deja = deja_installe()
@@ -3638,9 +3637,9 @@ def fenetre_installation():
 
 
 def fenetre_desinstallation(parent=None):
-    """Windows : Paramètres > Applications > Désinstaller. Linux : bouton dans les Réglages.
+    """Windows: Settings > Apps > Uninstall. Linux: button in the Settings.
 
-    Renvoie True si le programme a été désinstallé.
+    Returns True if the program was uninstalled.
     """
     racine, polices = _fenetre_simple(_("Désinstaller Pocket Book"), parent)
     resultat = {"fait": False}
@@ -3683,7 +3682,7 @@ def fenetre_desinstallation(parent=None):
 
 
 def installer_si_besoin():
-    """Renvoie True si le programme doit s'arrêter là (installation ou désinstallation)."""
+    """Return True if the program must stop here (installation or uninstallation)."""
     if not installation_possible():
         return False
     if "--desinstaller" in sys.argv:
@@ -3693,7 +3692,7 @@ def installer_si_besoin():
     if not meme_fichier(sys.executable, chemins["exe"]):
         fenetre_installation()
         return True
-    # Lancé depuis la copie installée : on répare ce qui manquerait.
+    # Launched from the installed copy: repair whatever is missing.
     if EST_WINDOWS and lire_registre("DisplayName") is None:
         try:
             inscrire_dans_windows(chemins["exe"], True)
@@ -3708,7 +3707,7 @@ def installer_si_besoin():
 
 
 def main():
-    if "--langue" in sys.argv:  # langue choisie dans la fenêtre d'installation
+    if "--langue" in sys.argv:  # language chosen in the installation window
         i = sys.argv.index("--langue")
         if i + 1 < len(sys.argv):
             choisir_langue(sys.argv[i + 1])
@@ -3716,7 +3715,7 @@ def main():
     else:
         choisir_langue(langue_du_systeme())
     if EST_WINDOWS:
-        try:  # texte net sur les écrans haute définition
+        try:  # sharp text on high-DPI screens
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except Exception:

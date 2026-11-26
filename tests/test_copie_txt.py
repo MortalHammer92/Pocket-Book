@@ -1,4 +1,4 @@
-"""Copie .txt de chaque fiche : création, mise à jour, renommage, corbeille."""
+""".txt copy of each card: creation, update, renaming, trash."""
 from pocket_book import Carnet, nom_de_fichier
 
 

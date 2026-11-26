@@ -1,4 +1,4 @@
-"""Générateur de mots de passe."""
+"""Password generator."""
 import pocket_book
 from pocket_book import AMBIGUS, SYMBOLES, generer_mot_de_passe, generer_phrase
 

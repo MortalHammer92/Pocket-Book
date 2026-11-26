@@ -1,6 +1,6 @@
-# Fabrique Pocket Book pour Windows, macOS (Apple Silicon et Intel) et Linux,
-# puis publie une « Release » GitHub avec les fichiers à télécharger.
-# Déclenchement : pousser une étiquette de version, par exemple
+# Builds Pocket Book for Windows, macOS (Apple Silicon and Intel) and Linux,
+# then publishes a GitHub Release with the files to download.
+# Trigger: push a version tag, for example
 #   git tag v1.0.0 && git push origin v1.0.0
 name: Release
 

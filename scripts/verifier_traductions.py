@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Vérifie les traductions de Pocket Book / Checks Pocket Book's translations.
+"""Check Pocket Book's translations.
 
-Repère toutes les phrases passées à _() ou n_() dans pocket_book.py (et les libellés traduits à
-l'usage), puis signale pour chaque langue de langues.py :
-  - les phrases sans traduction ;
-  - les traductions dont les {marqueurs} ne correspondent pas.
+Finds every sentence passed to _() or n_() in pocket_book.py (and the labels translated
+when used), then reports for each language in langues.py:
+  - sentences with no translation;
+  - translations whose {placeholders} do not match.
 
-Usage : python scripts/verifier_traductions.py      (code de sortie 1 s'il y a un problème)
+Usage: python scripts/verifier_traductions.py      (exit code 1 if there is a problem)
 """
 import ast
 import re

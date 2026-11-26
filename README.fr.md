@@ -156,7 +156,7 @@ scripts/build_windows.bat, build.sh   fabrication locale
 .github/workflows/             tests sur 3 systèmes + fabrication des versions
 ```
 
-Le code est écrit en français ; l'interface est traduite. Ajouter une langue = ajouter un
+Les noms du code sont en français, les commentaires en anglais ; l'interface est traduite. Ajouter une langue = ajouter un
 dictionnaire dans `langues.py` — `python scripts/verifier_traductions.py` liste ce qui manque.
 
 ## Questions fréquentes

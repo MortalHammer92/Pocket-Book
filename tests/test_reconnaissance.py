@@ -1,4 +1,4 @@
-"""Reconnaissance des documents : mot de passe, contact ou autre (données inventées)."""
+"""Document recognition: password, contact or other (made-up data)."""
 import pytest
 
 from pocket_book import classer_document, deviner, deviner_fiche

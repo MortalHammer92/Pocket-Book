@@ -153,7 +153,7 @@ scripts/build_windows.bat, build.sh   local builds
 .github/workflows/             tests on 3 systems + release builds
 ```
 
-The code is written in French (variables and comments); the interface is translated.
+Identifiers are in French, comments and docstrings in English; the interface is translated.
 Adding a language means adding one dictionary in `langues.py` —
 `python scripts/verifier_traductions.py` lists what is missing.
 

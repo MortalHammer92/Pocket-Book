@@ -1,4 +1,4 @@
-"""Toutes les phrases de l'interface sont traduites, avec les mêmes {marqueurs}."""
+"""Every interface sentence is translated, with the same {placeholders}."""
 import sys
 from pathlib import Path
 

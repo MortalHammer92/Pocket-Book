@@ -1,15 +1,36 @@
-# Fabrication
+# Build output
 .venv/
+venv/
 build/
 dist/
 release/
 *.spec
-__pycache__/
-*.pyc
-.pytest_cache/
+*.egg-info/
 
-# Ne jamais publier de vraies données / never commit real data
+# Python cache and tests
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files and logs
+*.tmp
+*.log
+
+# Never commit real data
 pocketbook.json
+pocketbook_*.json
 carnet.json
 index_documents.json
 backups/
+
+# Local helper script (not part of the project)
+envoyer_sur_github.bat

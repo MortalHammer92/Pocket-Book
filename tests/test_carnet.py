@@ -1,4 +1,4 @@
-"""Enregistrement, sauvegardes, reprise après un fichier abîmé, catégories."""
+"""Saving, backups, recovery from a damaged file, categories."""
 import json
 
 from pocket_book import Carnet
